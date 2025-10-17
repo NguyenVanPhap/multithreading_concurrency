@@ -49,7 +49,7 @@ public class VisualizerPropertiesValidator implements ConstraintValidator<ValidV
         
         // Validate file configuration
         if (output.getType() == VisualizerProperties.Output.Type.FILE && output.getFile() != null) {
-            VisualizerProperties.File fileConfig = output.getFile();
+            VisualizerProperties.Output.File fileConfig = output.getFile();
             
             // Validate file path
             if (StringUtils.hasText(fileConfig.getPath())) {
@@ -103,7 +103,7 @@ public class VisualizerPropertiesValidator implements ConstraintValidator<ValidV
         
         // Validate socket configuration
         if (output.getType() == VisualizerProperties.Output.Type.SOCKET && output.getSocket() != null) {
-            VisualizerProperties.Socket socketConfig = output.getSocket();
+            VisualizerProperties.Output.Socket socketConfig = output.getSocket();
             
             // Validate port
             if (socketConfig.getPort() <= 0 || socketConfig.getPort() > 65535) {

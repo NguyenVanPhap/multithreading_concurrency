@@ -54,36 +54,36 @@ public class VisualizerMetricsContributor {
         
         // Initialize gauges
         activeQueriesGauge = new AtomicLong(0);
-        Gauge.builder("spring.jpa.visualizer.queries.active")
+        Gauge.builder("spring.jpa.visualizer.queries.active", activeQueriesGauge, AtomicLong::get)
                 .description("Number of currently active queries")
-                .register(meterRegistry, activeQueriesGauge, AtomicLong::get);
+                .register(meterRegistry);
         
         entityCountGauge = new AtomicLong(0);
-        Gauge.builder("spring.jpa.visualizer.entities.count")
+        Gauge.builder("spring.jpa.visualizer.entities.count", entityCountGauge, AtomicLong::get)
                 .description("Number of tracked entities")
-                .register(meterRegistry, entityCountGauge, AtomicLong::get);
+                .register(meterRegistry);
         
         queryTypeCountGauge = new AtomicLong(0);
-        Gauge.builder("spring.jpa.visualizer.query.types.count")
+        Gauge.builder("spring.jpa.visualizer.query.types.count", queryTypeCountGauge, AtomicLong::get)
                 .description("Number of tracked query types")
-                .register(meterRegistry, queryTypeCountGauge, AtomicLong::get);
+                .register(meterRegistry);
         
         // Initialize performance metrics gauges
-        Gauge.builder("spring.jpa.visualizer.performance.avg.execution.time")
+        Gauge.builder("spring.jpa.visualizer.performance.avg.execution.time", this, VisualizerMetricsContributor::getAvgExecutionTime)
                 .description("Average SQL query execution time")
-                .register(meterRegistry, this, VisualizerMetricsContributor::getAvgExecutionTime);
+                .register(meterRegistry);
         
-        Gauge.builder("spring.jpa.visualizer.performance.slow.query.rate")
+        Gauge.builder("spring.jpa.visualizer.performance.slow.query.rate", this, VisualizerMetricsContributor::getSlowQueryRate)
                 .description("Rate of slow queries")
-                .register(meterRegistry, this, VisualizerMetricsContributor::getSlowQueryRate);
+                .register(meterRegistry);
         
-        Gauge.builder("spring.jpa.visualizer.sampling.rate")
+        Gauge.builder("spring.jpa.visualizer.sampling.rate", this, VisualizerMetricsContributor::getSamplingRate)
                 .description("Actual query sampling rate")
-                .register(meterRegistry, this, VisualizerMetricsContributor::getSamplingRate);
+                .register(meterRegistry);
         
-        Gauge.builder("spring.jpa.visualizer.recent.slow.queries.count")
+        Gauge.builder("spring.jpa.visualizer.recent.slow.queries.count", this, VisualizerMetricsContributor::getRecentSlowQueriesCount)
                 .description("Number of recent slow queries")
-                .register(meterRegistry, this, VisualizerMetricsContributor::getRecentSlowQueriesCount);
+                .register(meterRegistry);
     }
     
     /**

@@ -2,8 +2,8 @@ package com.springjpa.visualizer.config;
 
 import com.springjpa.visualizer.interceptor.HibernateStatementInspector;
 import com.springjpa.visualizer.logger.QueryLogger;
-import org.springframework.boot.actuator.health.Health;
-import org.springframework.boot.actuator.health.HealthIndicator;
+import org.springframework.boot.actuate.health.Health;
+import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.stereotype.Component;
 

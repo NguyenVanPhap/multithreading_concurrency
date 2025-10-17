@@ -89,7 +89,13 @@ WHERE u.email = ?
 
 ## 🧰 Cài đặt (sắp có)
 
-### Option 1 — Gradle/Maven (Core Library)
+### Option 1 — Gradle (Core Library)
+
+```gradle
+implementation("com.spring-jpa-visualizer:spring-jpa-query-visualizer-core:0.1.0")
+```
+
+### Option 2 — Maven (Core Library)
 
 ```xml
 <dependency>
@@ -99,11 +105,11 @@ WHERE u.email = ?
 </dependency>
 ```
 
-### Option 2 — IntelliJ Plugin
+### Option 3 — IntelliJ Plugin
 
 * Cài đặt qua **JetBrains Marketplace** → Tìm kiếm "Spring JPA Query Visualizer"
 
-### Option 3 — VSCode Extension
+### Option 4 — VSCode Extension
 
 * Cài đặt từ VSCode Marketplace → "Spring JPA Query Visualizer"
 

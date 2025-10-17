@@ -44,7 +44,7 @@ public class QueryLoggerFactory {
     /**
      * Create a file-based JSON logger
      */
-    private static QueryLogger createFileLogger(VisualizerProperties.File fileConfig) {
+    private static QueryLogger createFileLogger(VisualizerProperties.Output.File fileConfig) {
         if (fileConfig == null) {
             return createDefaultFileLogger();
         }
@@ -62,7 +62,7 @@ public class QueryLoggerFactory {
     /**
      * Create a socket-based logger
      */
-    private static QueryLogger createSocketLogger(VisualizerProperties.Socket socketConfig) {
+    private static QueryLogger createSocketLogger(VisualizerProperties.Output.Socket socketConfig) {
         if (socketConfig == null) {
             logger.warn("Socket configuration is null, using default file logger");
             return createDefaultFileLogger();

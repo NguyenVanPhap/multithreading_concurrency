@@ -233,16 +233,16 @@ public class JsonQueryLogger implements QueryLogger {
         // Create new file with timestamp
         String timestamp = String.valueOf(System.currentTimeMillis());
         String fileName = currentLogFile.getFileName().toString();
-        String baseName = fileName.substring(0, fileName.lastIndexOf('.'));
+        String baseNameLocal = fileName.substring(0, fileName.lastIndexOf('.'));
         String extension = fileName.substring(fileName.lastIndexOf('.'));
         
-        Path newFile = currentLogFile.getParent().resolve(baseName + "_" + timestamp + extension);
+        Path newFile = currentLogFile.getParent().resolve(baseNameLocal + "_" + timestamp + extension);
         
         // Move current file to new name
         Files.move(currentLogFile, newFile);
         
         // Clean up old files
-        cleanupOldFiles();
+        cleanupOldFiles(baseNameLocal);
         
         // Initialize new log file
         initializeLogFile();
@@ -251,14 +251,13 @@ public class JsonQueryLogger implements QueryLogger {
     /**
      * Clean up old log files
      */
-    private void cleanupOldFiles() {
+    private void cleanupOldFiles(String baseNameLocal) {
         try {
             Path logDir = currentLogFile.getParent();
-            String baseName = currentLogFile.getFileName().toString();
-            baseName = baseName.substring(0, baseName.lastIndexOf('.'));
+            final String base = baseNameLocal; // effectively final for lambda
             
             Files.list(logDir)
-                .filter(path -> path.getFileName().toString().startsWith(baseName))
+                .filter(path -> path.getFileName().toString().startsWith(base))
                 .sorted((p1, p2) -> p2.getFileName().toString().compareTo(p1.getFileName().toString()))
                 .skip(maxFiles)
                 .forEach(path -> {
