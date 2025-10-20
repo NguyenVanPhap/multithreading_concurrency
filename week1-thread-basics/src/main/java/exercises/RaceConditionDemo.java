@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class RaceConditionDemo {
     
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         System.out.println("=== Race Condition Demo ===\n");
         
         // Demo 1: Basic race condition with Counter
@@ -234,11 +234,11 @@ public class RaceConditionDemo {
      * 4. Check how many array elements have correct final values
      * 5. Observe race condition in array element access
      */
-    private static void demonstrateArrayRaceCondition() {
+    private static void demonstrateArrayRaceCondition() throws InterruptedException {
         System.out.println("--- Demo 5: Array Race Condition ---");
         
         final int ARRAY_SIZE = 100;
-        final int THREAD_COUNT = 5;
+        final int THREAD_COUNT = 200;
         // TODO: Create shared array
         int[] sharedArray = new int[ARRAY_SIZE];
         
@@ -252,17 +252,28 @@ public class RaceConditionDemo {
                 // TODO: Loop through all array elements
                 // TODO: Increment each element: sharedArray[j] = sharedArray[j] + 1
                 // TODO: Print completion message
+                for(int j = 0; j < sharedArray.length; j++ )
+                {
+                    sharedArray[j] = sharedArray[j] + 1;
+                    Thread.yield();
+                }
+                System.out.println("Complete thread " + threadId);
                 latch.countDown();
             });
+
         }
         
         System.out.println("Starting " + THREAD_COUNT + " threads to increment array elements...");
         System.out.println("Expected final values: " + THREAD_COUNT);
         
         // TODO: Start all threads
+        for (int i = 0; i < THREAD_COUNT; i++) {
+            threads[i].start();
+        }
         
         // TODO: Wait for all threads using latch.await()
-        
+        latch.await();
+
         // TODO: Check results - count correct values
         int correctValues = 0;
         for (int i = 0; i < ARRAY_SIZE; i++) {

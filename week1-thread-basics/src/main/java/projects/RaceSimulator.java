@@ -77,24 +77,18 @@ public class RaceSimulator {
      */
     private static void runSingleRacerDemo() {
         System.out.println("\n--- Single Racer Demo ---");
-        
+
         // TODO: Create a Racer with name "Solo Runner" and id 1
-        Racer racer = new Racer("Solo Runner", 1);
-        
         // TODO: Create RaceTrack for 1 racer
-        RaceTrack track = new RaceTrack(1);
-        
         // TODO: Add racer to track
-        track.addRacer(racer);
-        
         // TODO: Start race
-        track.startRace();
-        
         // TODO: Wait for race to finish
-        track.waitForRaceToFinish();
-        
         // TODO: Display results
-        displayResults(track);
+
+        System.out.println("TODO: Implement runSingleRacerDemo()");
+        System.out.println("Hint: create a Racer, a RaceTrack with 1 slot, add the racer, start, wait, then display results.");
+        // Early return to keep program runnable while you implement this demo
+        return;
     }
     
     /**
@@ -109,40 +103,30 @@ public class RaceSimulator {
      */
     private static void runMultiRacerRace() {
         System.out.println("\n--- Multi-Racer Race ---");
-        
+
         Scanner scanner = new Scanner(System.in);
         System.out.print("Enter number of racers (2-10): ");
-        
+
         try {
             // TODO: Get user input for racer count
             int racerCount = scanner.nextInt();
-            
+
             // TODO: Validate input (2-10)
             if (racerCount < 2 || racerCount > 10) {
                 System.out.println("Invalid number. Using 5 racers.");
                 racerCount = 5;
             }
-            
+
             // TODO: Create RaceTrack
-            RaceTrack track = new RaceTrack(racerCount);
-            
             // TODO: Create racers with names and emojis
-            String[] names = {"Lightning", "Thunder", "Storm", "Flash", "Bolt", 
-                            "Rocket", "Speed", "Turbo", "Nitro", "Velocity"};
-            String[] emojis = {"🏃", "🏃‍♂️", "🏃‍♀️", "💨", "⚡", "🚀", "🔥", "💥", "⭐", "🌟"};
-            
-            // TODO: Create racers in a loop
-            for (int i = 0; i < racerCount; i++) {
-                // TODO: Create racer with name + emoji and add to track
-            }
-            
+            // TODO: Create racers in a loop and add to track
             // TODO: Start race and wait for completion
-            track.startRace();
-            track.waitForRaceToFinish();
-            
             // TODO: Display results
-            displayResults(track);
-            
+
+            // Stop here so you can complete the TODOs above before running the race
+            System.out.println("TODO: Finish runMultiRacerRace(): create racers and start the race.");
+            return;
+
         } catch (InputMismatchException e) {
             System.out.println("Invalid input. Running with 5 default racers.");
             runDefaultMultiRacerRace();
@@ -162,7 +146,7 @@ public class RaceSimulator {
     private static void runDefaultMultiRacerRace() {
         // TODO: Create RaceTrack for 5 racers
         RaceTrack track = new RaceTrack(5);
-        
+
         // TODO: Create array of 5 racers with names and emojis
         Racer[] racers = {
             new Racer("Lightning ⚡", 1),
@@ -171,16 +155,16 @@ public class RaceSimulator {
             new Racer("Flash 💨", 4),
             new Racer("Rocket 🚀", 5)
         };
-        
+
         // TODO: Add all racers to track
         for (Racer racer : racers) {
             track.addRacer(racer);
         }
-        
+
         // TODO: Start race and wait for completion
         track.startRace();
         track.waitForRaceToFinish();
-        
+
         // TODO: Display results
         displayResults(track);
     }
@@ -196,12 +180,12 @@ public class RaceSimulator {
      */
     private static void runPerformanceComparison() {
         System.out.println("\n--- Performance Comparison ---");
-        
+
         final int RACER_COUNT = 10;
         final int RACE_COUNT = 5;
-        
+
         System.out.println("Running " + RACE_COUNT + " races with " + RACER_COUNT + " racers each...");
-        
+
         // TODO: Multi-threaded races timing
         long multiThreadStart = System.currentTimeMillis();
         for (int i = 0; i < RACE_COUNT; i++) {
@@ -216,7 +200,7 @@ public class RaceSimulator {
             track.waitForRaceToFinish();
         }
         long multiThreadTime = System.currentTimeMillis() - multiThreadStart;
-        
+
         // TODO: Single-threaded simulation timing
         long singleThreadStart = System.currentTimeMillis();
         for (int i = 0; i < RACE_COUNT; i++) {
@@ -224,7 +208,7 @@ public class RaceSimulator {
             simulateSequentialRace(RACER_COUNT);
         }
         long singleThreadTime = System.currentTimeMillis() - singleThreadStart;
-        
+
         // TODO: Display performance results
         System.out.println("\n--- Performance Results ---");
         System.out.println("Multi-threaded time: " + multiThreadTime + " ms");
@@ -246,7 +230,7 @@ public class RaceSimulator {
         // TODO: Create array to track positions
         int[] positions = new int[racerCount];
         Random random = new Random();
-        
+
         // TODO: Race loop until all finished
         while (true) {
             boolean finished = true;
@@ -274,25 +258,25 @@ public class RaceSimulator {
      */
     private static void displayResults(RaceTrack track) {
         System.out.println("\n🏆 === RACE RESULTS === 🏆");
-        
+
         // TODO: Get racers and sort by finish time
         List<Racer> racers = track.getRacers();
         racers.sort((r1, r2) -> Integer.compare(r1.getFinishTime(), r2.getFinishTime()));
-        
+
         String[] medals = {"🥇", "🥈", "🥉"};
         String[] positions = {"1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"};
-        
+
         // TODO: Display results for each racer
         for (int i = 0; i < racers.size(); i++) {
             Racer racer = racers.get(i);
             String medal = i < 3 ? medals[i] + " " : "   ";
             String position = positions[i];
-            
+
             // TODO: Print racer result with medal, position, name, and time
             System.out.println(String.format("%s %s: %s (Time: %d ms)", 
                 medal, position, racer.getName(), racer.getFinishTime()));
         }
-        
+
         // TODO: Announce winner
         if (!racers.isEmpty()) {
             System.out.println("\n🏆 Winner: " + racers.get(0).getName() + " 🏆");
@@ -301,6 +285,14 @@ public class RaceSimulator {
     
     /**
      * Race Track - manages the race and racers
+     * 
+     * TODO (Learning tasks):
+     * 1) Store racers and race state (started/finished, finishedCount)
+     * 2) Add racers to the track
+     * 3) Start the race: countdown -> display -> start all racer tasks
+     * 4) Track completion and mark race as finished when all done
+     * 5) Periodically render the track until finished
+     * 6) Shutdown the executor service safely
      */
     static class RaceTrack {
         private final List<Racer> racers = new ArrayList<>();
@@ -314,20 +306,25 @@ public class RaceSimulator {
         }
         
         public void addRacer(Racer racer) {
+            // TODO: Add the given racer to internal list
             racers.add(racer);
         }
         
         public void startRace() {
+            // TODO: Ensure the race starts only once (use CAS on raceStarted)
             if (raceStarted.compareAndSet(false, true)) {
                 System.out.println("\n🏁 Race starting in 3 seconds...");
+                // TODO: Call countdown()
                 countdown();
                 
                 System.out.println("\n🏁 GO! 🏁\n");
+                // TODO: Initial render of the track
                 displayRaceTrack();
                 
-                // Start all racer threads
+                // TODO: Start all racer threads (submit tasks to executor)
                 for (Racer racer : racers) {
                     executor.submit(() -> {
+                        // TODO: Run racer.race() and update finished counters
                         racer.race();
                         if (finishedCount.incrementAndGet() == racers.size()) {
                             raceFinished.set(true);
@@ -339,6 +336,7 @@ public class RaceSimulator {
         }
         
         public void waitForRaceToFinish() {
+            // TODO: While not finished, sleep briefly and re-render the track
             while (!raceFinished.get()) {
                 try {
                     Thread.sleep(100);
@@ -351,6 +349,7 @@ public class RaceSimulator {
                 }
             }
             
+            // TODO: Shutdown executor gracefully (await termination, then force if needed)
             executor.shutdown();
             try {
                 if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
@@ -363,6 +362,7 @@ public class RaceSimulator {
         }
         
         private void countdown() {
+            // TODO: Print 3..2..1 with 1s delay and handle interruption
             for (int i = 3; i > 0; i--) {
                 System.out.println(i + "...");
                 try {
@@ -375,6 +375,7 @@ public class RaceSimulator {
         }
         
         private void displayRaceTrack() {
+            // TODO: Render each racer's progress to the console
             System.out.print("\r" + "\033[2K"); // Clear line
             
             for (Racer racer : racers) {
@@ -407,6 +408,7 @@ public class RaceSimulator {
         }
         
         public List<Racer> getRacers() {
+            // TODO: Return a copy of racers to avoid external modification
             return new ArrayList<>(racers);
         }
     }
@@ -433,43 +435,57 @@ public class RaceSimulator {
         // TODO: Complete the constructor
         public Racer(String name, int id) {
             // TODO: Initialize all fields
-            // TODO: Set startTime to current time
+            // Hints: assign to this.name / this.id and set startTime = System.currentTimeMillis()
+            this.name = name;
+            this.id = id;
+            this.startTime = System.currentTimeMillis();
         }
         
         // TODO: Implement the race method
         public void race() {
-            // TODO: Create a while loop that continues while not finished and position < RACE_DISTANCE
-            // TODO: Generate random movement (1-4 units)
-            // TODO: Update position
-            // TODO: Check if race is finished (position >= RACE_DISTANCE)
-            // TODO: If finished, set position to RACE_DISTANCE, finished to true, and calculate finishTime
-            // TODO: Add random delay (50-150ms) with proper exception handling for InterruptedException
+            // TODO: Implement movement and timing
+            // Move forward until finished
+            while (!finished && position < RACE_DISTANCE) {
+                // Generate random movement (1-4 units)
+                int step = random.nextInt(4) + 1;
+                position += step;
+
+                // Check for finish
+                if (position >= RACE_DISTANCE) {
+                    position = RACE_DISTANCE;
+                    finished = true;
+                    finishTime = (int) (System.currentTimeMillis() - startTime);
+                    break;
+                }
+
+                // TODO: Add random delay (50-150ms) with proper exception handling for InterruptedException
+            }
         }
         
         // TODO: Implement getter methods
         public String getName() {
-            // TODO: Return name
-            return null; // Remove this line when implemented
+			// Return name
+			return name;
         }
         
         public int getPosition() {
-            // TODO: Return position
-            return 0; // Remove this line when implemented
+			// Return current position
+			return position;
         }
         
         public boolean isFinished() {
-            // TODO: Return finished status
-            return false; // Remove this line when implemented
+			// Return finished status
+			return finished;
         }
         
         public int getFinishTime() {
-            // TODO: Return finish time
-            return 0; // Remove this line when implemented
+			// Return finish time in ms
+			return finishTime;
         }
         
         public int getId() {
-            // TODO: Return id
-            return 0; // Remove this line when implemented
+			// Return racer id
+			return id;
         }
     }
 }

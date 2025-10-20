@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class ThreadMethodsDemo {
     
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         System.out.println("=== Thread Methods Demo ===\n");
         
         // Demo 1: join() method
@@ -53,7 +53,7 @@ public class ThreadMethodsDemo {
      * 3. Use join() to wait for both to complete
      * 4. Measure and display the total time taken
      */
-    private static void demonstrateJoin() {
+    private static void demonstrateJoin() throws InterruptedException {
         System.out.println("--- Demo 1: join() Method ---");
         
         // TODO: Create Worker 1 thread that sleeps for 2000ms
@@ -61,6 +61,12 @@ public class ThreadMethodsDemo {
             System.out.println("Worker 1: Starting work...");
             // TODO: Add Thread.sleep(2000) with exception handling
             // TODO: Print completion message
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println("Worker 1: Finished work...");
         });
         
         // TODO: Create Worker 2 thread that sleeps for 1500ms
@@ -68,14 +74,25 @@ public class ThreadMethodsDemo {
             System.out.println("Worker 2: Starting work...");
             // TODO: Add Thread.sleep(1500) with exception handling
             // TODO: Print completion message
+            try {
+                Thread.sleep(1500);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println("Worker 2: Finished work...");
+
         });
         
         // TODO: Record start time
         long startTime = System.currentTimeMillis();
         
         // TODO: Start both workers
+        worker1.start();
+        worker2.start();
         
         // TODO: Wait for both workers to complete using join()
+        worker1.join();
+        worker2.join();
         
         // TODO: Calculate and display total time
         long endTime = System.currentTimeMillis();
@@ -90,7 +107,7 @@ public class ThreadMethodsDemo {
      * 2. Create a monitor thread that counts seconds
      * 3. Start both threads and observe the timing
      */
-    private static void demonstrateSleep() {
+    private static void demonstrateSleep() throws InterruptedException {
         System.out.println("--- Demo 2: sleep() Method ---");
         
         // TODO: Create a sleeper thread
@@ -98,17 +115,35 @@ public class ThreadMethodsDemo {
             System.out.println("Sleeper: Going to sleep...");
             // TODO: Sleep for 3 seconds with proper exception handling
             // TODO: Print wake-up message
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println("Sleeper: Finished going to sleep...");
         });
         
         // TODO: Create a monitor thread that counts seconds
         Thread monitor = new Thread(() -> {
             // TODO: Loop 3 times, sleep 1 second each, print count
+            for (int i=0; i<3; i++) {
+                try {
+                    Thread.sleep(1000);
+                    System.out.println("Sleeping: " + i);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
         });
         
         // TODO: Start both threads
+        sleeper.start();
+        monitor.start();
         
         // TODO: Wait for both threads to complete
-        
+        sleeper.join();
+        monitor.join();
+
         System.out.println();
     }
     
@@ -128,6 +163,16 @@ public class ThreadMethodsDemo {
             System.out.println("Greedy Thread: Starting intensive work...");
             // TODO: Loop 5 times, do busy work without yielding
             // TODO: Print progress and add busy work loop
+            for (int i=0; i<5; i++) {
+                System.out.println("Busy Thread: iteration " + i);
+
+                // Busy work (giả lập việc tính toán nặng)
+                for (int j = 0; j < 1_000_000; j++) {
+                    double dummy = Math.sqrt(j * Math.random()); // chỉ để CPU bận rộn
+                }
+
+                System.out.println("Busy Thread: completed iteration " + i);
+            }
             System.out.println("Greedy Thread: Finished!");
         });
         
@@ -136,6 +181,19 @@ public class ThreadMethodsDemo {
             System.out.println("Polite Thread: Starting cooperative work...");
             // TODO: Loop 5 times, yield after each iteration
             // TODO: Print progress, call Thread.yield(), and sleep briefly
+            for (int i=0; i<5; i++) {
+                System.out.println("Yield Thread: iteration " + i);
+                Thread.yield();
+
+                try {
+                    // Ngủ ngắn để quan sát rõ hơn hành vi chuyển đổi thread
+                    Thread.sleep(200);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    System.out.println("Yield Thread interrupted!");
+                }
+            }
+
             System.out.println("Polite Thread: Finished!");
         });
         
@@ -166,6 +224,7 @@ public class ThreadMethodsDemo {
                 // TODO: Check Thread.currentThread().isInterrupted() and return if interrupted
                 // TODO: Print work progress
                 // TODO: Sleep for 500ms
+                Thread.sleep(500);
                 System.out.println("Long Running Thread: Completed normally");
             } catch (InterruptedException e) {
                 // TODO: Print interruption message
@@ -179,6 +238,7 @@ public class ThreadMethodsDemo {
                 // TODO: Sleep for 2500ms
                 // TODO: Print interrupt signal message
                 // TODO: Call longRunningThread.interrupt()
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -250,6 +310,7 @@ public class ThreadMethodsDemo {
                 // TODO: Sleep for 2000ms
                 System.out.println("State Thread: Still running...");
                 // TODO: Sleep for 1000ms
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -261,6 +322,7 @@ public class ThreadMethodsDemo {
                 // TODO: While stateThread.isAlive(), monitor its state
                 // TODO: Print state every 500ms
                 // TODO: Print final state when thread dies
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -321,7 +383,7 @@ public class ThreadMethodsDemo {
         
         // TODO: Display final states of all workers
         for (Thread worker : workers) {
-            System.out.println(worker.getName() + " final state: " + worker.getState());
+            //System.out.println(worker.getName() + " final state: " + worker.getState());
         }
     }
 }
