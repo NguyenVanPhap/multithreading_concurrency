@@ -79,13 +79,13 @@ Thread.sleep(random.nextLong(50,150)); // 50-150ms mỗi bước!
 - 10 threads × 100ms × 25 bước = **25,000ms+** thời gian chờ
 - Đây là **I/O-bound task**, không phải CPU-bound
 
-#### 2. **Single-thread không có delay**
+#### 2. **Single-thread cũng có delay tương tự**
 ```java
-// Trong simulateSequentialRace() - dòng 250
-positions[i] += random.nextInt(3) + 1; // Không có delay!
+// Trong simulateSequentialRace() - dòng 256
+Thread.sleep(random.nextLong(50, 150)); // Cùng delay như multi-thread
 ```
-- Single-thread chỉ là vòng lặp đơn giản
-- Không có Thread.sleep() hay chờ đợi gì
+- Single-thread cũng có Thread.sleep() để so sánh công bằng
+- Nhưng vẫn chậm hơn vì phải xử lý tuần tự
 
 #### 3. **Thread overhead lớn hơn benefit**
 - **Thread creation cost**: Tạo 10 threads tốn thời gian
@@ -94,15 +94,21 @@ positions[i] += random.nextInt(3) + 1; // Không có delay!
 - **Synchronization cost**: AtomicBoolean, AtomicInteger
 - **Display overhead**: displayRaceTrack() được gọi mỗi 100ms
 
+#### 4. **Sequential vs Parallel processing**
+- **Single-thread**: Xử lý từng racer một cách tuần tự
+- **Multi-thread**: Xử lý tất cả racers song song
+- **Nhưng**: Với I/O-bound tasks, parallel không mang lại lợi ích
+
 ### 📊 **So sánh Task Types:**
 
 | Aspect | Race Simulator | Multi-threading hiệu quả |
 |--------|----------------|---------------------------|
 | **Task Type** | I/O-bound (sleep) | CPU-bound (tính toán) |
 | **Workload** | Đơn giản (position++) | Phức tạp (isPrime, math) |
-| **Delay** | 50-150ms mỗi bước | Không có delay |
+| **Delay** | 50-150ms mỗi bước (cả 2 version) | Không có delay |
 | **Dataset** | Nhỏ (100 units) | Lớn (1M-10M items) |
 | **Dependencies** | Independent | Independent |
+| **Processing** | Sequential vs Parallel | Parallel hiệu quả |
 
 ### 🎓 **Bài học quan trọng:**
 

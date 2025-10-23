@@ -195,27 +195,40 @@ public class RaceSimulator {
         System.out.println("Running " + RACE_COUNT + " races with " + RACER_COUNT + " racers each...");
 
         // TODO: Multi-threaded races timing
+        System.out.println("🔄 Starting multi-threaded races...");
         long multiThreadStart = System.currentTimeMillis();
-        for (int i = 0; i < RACE_COUNT; i++) {
-            // TODO: Create RaceTrack and racers
-            RaceTrack track = new RaceTrack(RACER_COUNT);
-            for (int j = 0; j < RACER_COUNT; j++) {
-                // TODO: Add racer to track
-                track.addRacer(new Racer("Racer-" + j, j + 1));
+        try {
+            for (int i = 0; i < RACE_COUNT; i++) {
+                System.out.println("  Race " + (i + 1) + "/" + RACE_COUNT + " starting...");
+                // TODO: Create RaceTrack and racers
+                RaceTrack track = new RaceTrack(RACER_COUNT);
+                for (int j = 0; j < RACER_COUNT; j++) {
+                    // TODO: Add racer to track
+                    track.addRacer(new Racer("Racer-" + j, j + 1));
+                }
+                // TODO: Start race and wait for completion
+                track.startRace();
+                track.waitForRaceToFinish();
+                System.out.println("  Race " + (i + 1) + "/" + RACE_COUNT + " completed!");
             }
-            // TODO: Start race and wait for completion
-            track.startRace();
-            track.waitForRaceToFinish();
+        } catch (Exception e) {
+            System.out.println("❌ Error in multi-threaded races: " + e.getMessage());
+            e.printStackTrace();
         }
         long multiThreadTime = System.currentTimeMillis() - multiThreadStart;
+        System.out.println("✅ Multi-threaded races completed in " + multiThreadTime + " ms");
 
         // TODO: Single-threaded simulation timing
+        System.out.println("🔄 Starting single-threaded simulations...");
         long singleThreadStart = System.currentTimeMillis();
         for (int i = 0; i < RACE_COUNT; i++) {
+            System.out.println("  Simulation " + (i + 1) + "/" + RACE_COUNT + " starting...");
             // TODO: Call simulateSequentialRace
             simulateSequentialRace(RACER_COUNT);
+            System.out.println("  Simulation " + (i + 1) + "/" + RACE_COUNT + " completed!");
         }
         long singleThreadTime = System.currentTimeMillis() - singleThreadStart;
+        System.out.println("✅ Single-threaded simulations completed in " + singleThreadTime + " ms");
 
         // TODO: Display performance results
         System.out.println("\n--- Performance Results ---");
@@ -246,9 +259,18 @@ public class RaceSimulator {
             for (int i = 0; i < racerCount; i++) {
                 // TODO: If racer hasn't finished, move them
                 if (positions[i] < RACE_DISTANCE) {
-                    // TODO: Move racer 1-3 units randomly
-                    positions[i] += random.nextInt(3) + 1;
+                    // TODO: Move racer 1-4 units randomly (same as multi-thread)
+                    int step = random.nextInt(4) + 1;
+                    positions[i] += step;
                     finished = false;
+                    
+                    // TODO: Add same delay as multi-thread for fair comparison
+                    try {
+                        Thread.sleep(random.nextLong(50, 150));
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
                 }
             }
             // TODO: If all finished, break loop
