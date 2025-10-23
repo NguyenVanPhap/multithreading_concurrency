@@ -57,8 +57,81 @@ mvn compile exec:java -Dexec.mainClass="exercises.ThreadCreationDemo"
 mvn compile exec:java -Dexec.mainClass="projects.RaceSimulator"
 ```
 
+## ⚠️ Tại Sao Race Simulator Multi-thread Chậm Hơn Single-thread?
+
+### 🔍 **Phân tích kết quả Performance Comparison:**
+
+Khi chạy Performance Comparison trong Race Simulator, bạn sẽ thấy:
+```
+Multi-threaded time: 38324 ms
+Single-threaded time: 1 ms
+Speedup: 0.00x
+```
+
+### 🎯 **Nguyên nhân chính:**
+
+#### 1. **Thread.sleep() quá dài**
+```java
+// Trong Racer.race() - dòng 471
+Thread.sleep(random.nextLong(50,150)); // 50-150ms mỗi bước!
+```
+- Mỗi thread phải chờ 50-150ms sau mỗi bước
+- 10 threads × 100ms × 25 bước = **25,000ms+** thời gian chờ
+- Đây là **I/O-bound task**, không phải CPU-bound
+
+#### 2. **Single-thread không có delay**
+```java
+// Trong simulateSequentialRace() - dòng 250
+positions[i] += random.nextInt(3) + 1; // Không có delay!
+```
+- Single-thread chỉ là vòng lặp đơn giản
+- Không có Thread.sleep() hay chờ đợi gì
+
+#### 3. **Thread overhead lớn hơn benefit**
+- **Thread creation cost**: Tạo 10 threads tốn thời gian
+- **Context switching**: Chuyển đổi giữa threads
+- **Memory overhead**: Mỗi thread cần stack riêng
+- **Synchronization cost**: AtomicBoolean, AtomicInteger
+- **Display overhead**: displayRaceTrack() được gọi mỗi 100ms
+
+### 📊 **So sánh Task Types:**
+
+| Aspect | Race Simulator | Multi-threading hiệu quả |
+|--------|----------------|---------------------------|
+| **Task Type** | I/O-bound (sleep) | CPU-bound (tính toán) |
+| **Workload** | Đơn giản (position++) | Phức tạp (isPrime, math) |
+| **Delay** | 50-150ms mỗi bước | Không có delay |
+| **Dataset** | Nhỏ (100 units) | Lớn (1M-10M items) |
+| **Dependencies** | Independent | Independent |
+
+### 🎓 **Bài học quan trọng:**
+
+#### ✅ **Multi-threading hiệu quả khi:**
+- **CPU-intensive tasks** (tính toán phức tạp)
+- **Independent work** (không phụ thuộc lẫn nhau)
+- **Large datasets** (nhiều dữ liệu cần xử lý)
+- **No I/O blocking** (không chờ đợi)
+
+#### ❌ **Multi-threading không hiệu quả khi:**
+- **I/O-bound tasks** (chờ network, file, sleep)
+- **Simple calculations** (phép tính đơn giản)
+- **Small datasets** (ít dữ liệu)
+- **Thread overhead > benefit**
+
+### 🚀 **Xem Demo Multi-threading Hiệu Quả:**
+
+Chạy các demo trong thư mục `src/main/java/projects/`:
+- `PrimeCalculatorDemo.java` - Tính số nguyên tố
+- `DataProcessorDemo.java` - Xử lý dữ liệu lớn
+
+Những demo này sẽ cho thấy multi-threading **nhanh hơn 2-4 lần** vì:
+- Task phức tạp (CPU-intensive)
+- Không có delay
+- Benefit > overhead
+
 ## 💡 Tips
 - Dùng Thread.sleep() để simulate movement delay
 - Random sử dụng java.util.Random hoặc ThreadLocalRandom
 - Thread.join() để đợi tất cả threads hoàn thành
 - Thread.interrupt() để dừng thread gracefully
+- **Quan trọng**: Multi-threading không phải lúc nào cũng nhanh hơn!

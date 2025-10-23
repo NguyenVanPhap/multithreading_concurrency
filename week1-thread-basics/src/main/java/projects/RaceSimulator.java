@@ -79,16 +79,18 @@ public class RaceSimulator {
         System.out.println("\n--- Single Racer Demo ---");
 
         // TODO: Create a Racer with name "Solo Runner" and id 1
+        Racer racer = new Racer("Solo Runner", 1);
         // TODO: Create RaceTrack for 1 racer
+        RaceTrack raceTrack = new RaceTrack(1);
         // TODO: Add racer to track
+        raceTrack.addRacer(racer);
         // TODO: Start race
+        raceTrack.startRace();
         // TODO: Wait for race to finish
+        raceTrack.waitForRaceToFinish();
+        
         // TODO: Display results
-
-        System.out.println("TODO: Implement runSingleRacerDemo()");
-        System.out.println("Hint: create a Racer, a RaceTrack with 1 slot, add the racer, start, wait, then display results.");
-        // Early return to keep program runnable while you implement this demo
-        return;
+        displayResults(raceTrack);
     }
     
     /**
@@ -118,14 +120,20 @@ public class RaceSimulator {
             }
 
             // TODO: Create RaceTrack
-            // TODO: Create racers with names and emojis
-            // TODO: Create racers in a loop and add to track
-            // TODO: Start race and wait for completion
-            // TODO: Display results
+            RaceTrack raceTrack = new RaceTrack(racerCount);
 
-            // Stop here so you can complete the TODOs above before running the race
-            System.out.println("TODO: Finish runMultiRacerRace(): create racers and start the race.");
-            return;
+            // TODO: Create racers with names and emojis
+            Racer[] racers = new Racer[racerCount];
+            // TODO: Create racers in a loop and add to track
+            for (int i = 0; i < racerCount; i++) {
+                racers[i] = new Racer("Racer " + (i + 1), i + 1);
+                raceTrack.addRacer(racers[i]);
+            }
+            // TODO: Start race and wait for completion
+            raceTrack.startRace();
+            raceTrack.waitForRaceToFinish();
+            // TODO: Display results
+            displayResults(raceTrack);
 
         } catch (InputMismatchException e) {
             System.out.println("Invalid input. Running with 5 default racers.");
@@ -459,6 +467,12 @@ public class RaceSimulator {
                 }
 
                 // TODO: Add random delay (50-150ms) with proper exception handling for InterruptedException
+                try {
+                    Thread.sleep(random.nextLong(50,150));
+                } catch (InterruptedException e) {
+                    System.out.println("Interrupted" + e.getMessage());
+                    //throw new RuntimeException(e);
+                }
             }
         }
         
