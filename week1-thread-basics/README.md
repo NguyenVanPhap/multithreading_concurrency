@@ -5,6 +5,14 @@
 - Thread vs Runnable interface
 - Thread methods: start(), join(), sleep(), yield(), interrupt()
 - Basic synchronization concepts
+- When to use multi-threading vs single-threading
+- Performance comparison and measurement
+
+## 🎓 Learning Path
+1. **Bắt đầu với Exercises**: `ThreadCreationDemo` → `RaceConditionDemo` → `ThreadMethodsDemo`
+2. **Chạy Race Simulator**: Hiểu thread management và tại sao multi-thread có thể chậm hơn
+3. **Chạy Performance Demos**: `PrimeCalculatorDemo` và `DataProcessorDemo` để thấy multi-threading hiệu quả
+4. **So sánh kết quả**: Hiểu khi nào multi-threading thực sự có lợi
 
 ## 🎯 Bài Tập Tuần 1
 
@@ -18,8 +26,9 @@
 - Viết nhiều thread cùng increment counter
 - Quan sát kết quả không đồng nhất (race condition)
 
-### 🏆 Mini Project: Race Simulator
+### 🏆 Mini Projects
 
+#### 1. Race Simulator
 **Mô tả**: Mô phỏng cuộc đua xe/đua ốc sên
 - Mỗi thread = 1 xe/ốc sên
 - Tiến ngẫu nhiên theo tốc độ khác nhau  
@@ -27,16 +36,40 @@
 - Kết quả cuối: ai thắng?
 
 **Features**:
-- [ ] Thread creation và management
-- [ ] Random movement simulation
-- [ ] Real-time progress tracking
-- [ ] Winner determination
-- [ ] Performance comparison (1 vs N threads)
+- [x] Thread creation và management
+- [x] Random movement simulation
+- [x] Real-time progress tracking
+- [x] Winner determination
+- [x] Performance comparison (1 vs N threads)
+
+#### 2. Prime Calculator Demo
+**Mô tả**: So sánh hiệu suất tính số nguyên tố
+- Single-thread vs Multi-thread
+- Tìm số nguyên tố từ 2 đến 1,000,000
+- CPU-intensive task
+
+**Features**:
+- [x] Performance comparison
+- [x] CPU-intensive workload
+- [x] Speedup calculation
+
+#### 3. Data Processor Demo
+**Mô tả**: So sánh xử lý dữ liệu lớn
+- Single-thread vs Multi-thread
+- Tính tổng bình phương 10 triệu số
+- Parallel processing
+
+**Features**:
+- [x] Large dataset processing
+- [x] Performance comparison
+- [x] Parallel data processing
 
 ## 📁 File Structure
 ```
 week1-thread-basics/
 ├── README.md
+├── MULTITHREADING_DEMO_README.md
+├── LEARNING_GUIDE.md
 ├── src/
 │   ├── main/java/
 │   │   ├── exercises/
@@ -44,96 +77,84 @@ week1-thread-basics/
 │   │   │   ├── RaceConditionDemo.java
 │   │   │   └── ThreadMethodsDemo.java
 │   │   └── projects/
-│   │       └── RaceSimulator.java
+│   │       ├── RaceSimulator.java
+│   │       ├── PrimeCalculatorDemo.java
+│   │       └── DataProcessorDemo.java
 │   └── test/java/
 │       └── RaceSimulatorTest.java
-└── pom.xml
+├── pom.xml
+└── run_demo.bat
 ```
 
 ## 🚀 Cách Chạy
+
+### Sử dụng Maven:
 ```bash
 cd week1-thread-basics
+
+# Chạy exercises
 mvn compile exec:java -Dexec.mainClass="exercises.ThreadCreationDemo"
+mvn compile exec:java -Dexec.mainClass="exercises.RaceConditionDemo"
+mvn compile exec:java -Dexec.mainClass="exercises.ThreadMethodsDemo"
+
+# Chạy projects
 mvn compile exec:java -Dexec.mainClass="projects.RaceSimulator"
+mvn compile exec:java -Dexec.mainClass="projects.PrimeCalculatorDemo"
+mvn compile exec:java -Dexec.mainClass="projects.DataProcessorDemo"
 ```
 
-## ⚠️ Tại Sao Race Simulator Multi-thread Chậm Hơn Single-thread?
-
-### 🔍 **Phân tích kết quả Performance Comparison:**
-
-Khi chạy Performance Comparison trong Race Simulator, bạn sẽ thấy:
-```
-Multi-threaded time: 38324 ms
-Single-threaded time: 1 ms
-Speedup: 0.00x
+### Sử dụng batch file (Windows):
+```bash
+cd week1-thread-basics
+run_demo.bat
 ```
 
-### 🎯 **Nguyên nhân chính:**
+### Chạy trực tiếp với Java:
+```bash
+cd week1-thread-basics/src/main/java
 
-#### 1. **Thread.sleep() quá dài**
-```java
-// Trong Racer.race() - dòng 471
-Thread.sleep(random.nextLong(50,150)); // 50-150ms mỗi bước!
+# Compile
+javac exercises/*.java projects/*.java
+
+# Run
+java exercises.ThreadCreationDemo
+java projects.RaceSimulator
+java projects.PrimeCalculatorDemo
+java projects.DataProcessorDemo
 ```
-- Mỗi thread phải chờ 50-150ms sau mỗi bước
-- 10 threads × 100ms × 25 bước = **25,000ms+** thời gian chờ
-- Đây là **I/O-bound task**, không phải CPU-bound
 
-#### 2. **Single-thread cũng có delay tương tự**
-```java
-// Trong simulateSequentialRace() - dòng 256
-Thread.sleep(random.nextLong(50, 150)); // Cùng delay như multi-thread
-```
-- Single-thread cũng có Thread.sleep() để so sánh công bằng
-- Nhưng vẫn chậm hơn vì phải xử lý tuần tự
 
-#### 3. **Thread overhead lớn hơn benefit**
-- **Thread creation cost**: Tạo 10 threads tốn thời gian
-- **Context switching**: Chuyển đổi giữa threads
-- **Memory overhead**: Mỗi thread cần stack riêng
-- **Synchronization cost**: AtomicBoolean, AtomicInteger
-- **Display overhead**: displayRaceTrack() được gọi mỗi 100ms
+## 📊 So Sánh Các Demo Projects
 
-#### 4. **Sequential vs Parallel processing**
-- **Single-thread**: Xử lý từng racer một cách tuần tự
-- **Multi-thread**: Xử lý tất cả racers song song
-- **Nhưng**: Với I/O-bound tasks, parallel không mang lại lợi ích
+| Demo | Task Type | Dataset Size | Delay | Expected Speedup | Lý do |
+|------|-----------|--------------|-------|------------------|-------|
+| **Race Simulator** | I/O-bound | Nhỏ (100 units) | 50-150ms | 0.5-1.0x (chậm hơn) | Thread.sleep overhead |
+| **Prime Calculator** | CPU-bound | Lớn (1M numbers) | Không | 2.5-3.5x | Tính toán phức tạp |
+| **Data Processor** | CPU-bound | Rất lớn (10M items) | Không | 2.0-3.0x | Parallel processing |
 
-### 📊 **So sánh Task Types:**
+### 🎯 **Kết luận quan trọng:**
+- **Race Simulator**: Demo về thread management, không phải performance
+- **Prime Calculator & Data Processor**: Demo về multi-threading hiệu quả
+- **Multi-threading không phải lúc nào cũng nhanh hơn!**
 
-| Aspect | Race Simulator | Multi-threading hiệu quả |
-|--------|----------------|---------------------------|
-| **Task Type** | I/O-bound (sleep) | CPU-bound (tính toán) |
-| **Workload** | Đơn giản (position++) | Phức tạp (isPrime, math) |
-| **Delay** | 50-150ms mỗi bước (cả 2 version) | Không có delay |
-| **Dataset** | Nhỏ (100 units) | Lớn (1M-10M items) |
-| **Dependencies** | Independent | Independent |
-| **Processing** | Sequential vs Parallel | Parallel hiệu quả |
+## 🧭 Khi nào dùng Single-thread vs Multi-thread
 
-### 🎓 **Bài học quan trọng:**
+- **Dùng Single-thread khi:**
+  - Tác vụ nhỏ, ngắn; overhead tạo/quản lý thread không đáng so với lợi ích
+  - I/O-bound ít chờ đợi hoặc đã có thư viện async/non-blocking
+  - Logic phụ thuộc tuần tự, cần tính quyết định theo thứ tự; ưu tiên đơn giản/dễ debug
+  - Môi trường tài nguyên hạn chế (mobile/embedded), tránh oversubscription
 
-#### ✅ **Multi-threading hiệu quả khi:**
-- **CPU-intensive tasks** (tính toán phức tạp)
-- **Independent work** (không phụ thuộc lẫn nhau)
-- **Large datasets** (nhiều dữ liệu cần xử lý)
-- **No I/O blocking** (không chờ đợi)
+- **Dùng Multi-thread khi:**
+  - Công việc **CPU-intensive** có thể chia nhỏ độc lập (no shared state) 
+  - Dữ liệu lớn cần xử lý song song; mỗi phần có thể tính độc lập
+  - Muốn tận dụng nhiều CPU cores (thường chọn số threads ≈ số cores)
+  - I/O-bound có nhiều tác vụ chờ đợi độc lập (thread pool che giấu độ trễ)
 
-#### ❌ **Multi-threading không hiệu quả khi:**
-- **I/O-bound tasks** (chờ network, file, sleep)
-- **Simple calculations** (phép tính đơn giản)
-- **Small datasets** (ít dữ liệu)
-- **Thread overhead > benefit**
-
-### 🚀 **Xem Demo Multi-threading Hiệu Quả:**
-
-Chạy các demo trong thư mục `src/main/java/projects/`:
-- `PrimeCalculatorDemo.java` - Tính số nguyên tố
-- `DataProcessorDemo.java` - Xử lý dữ liệu lớn
-
-Những demo này sẽ cho thấy multi-threading **nhanh hơn 2-4 lần** vì:
-- Task phức tạp (CPU-intensive)
-- Không có delay
-- Benefit > overhead
+- **Lưu ý quan trọng:**
+  - Tránh tạo quá nhiều threads (oversubscription) → context switching tăng, hiệu năng giảm
+  - Chia việc đều giữa threads; giảm contention/synchronization, tránh shared mutable state
+  - Luôn đo lường trước/sau (profiling) và tối ưu dựa trên số liệu thực tế
 
 ## 💡 Tips
 - Dùng Thread.sleep() để simulate movement delay
