@@ -15,10 +15,16 @@ import java.util.concurrent.*;
  */
 public class DataProcessorDemo {
     
-    private static final int DATA_SIZE = 10_000_000; // 10 triệu phần tử
-    private static final int THREAD_COUNT = 4;
+    private static final int DATA_SIZE = 100_000_000; // 100 triệu phần tử (tăng lên để thấy rõ benefit)
+    private static final int THREAD_COUNT = 8; // Tăng số threads
     
     public static void main(String[] args) {
+        // Auto-run performance comparison if args provided
+        if (args.length > 0 && args[0].equals("test")) {
+            runPerformanceComparison();
+            return;
+        }
+        
         System.out.println("📊 === DATA PROCESSOR DEMO === 📊\n");
         System.out.println("Mục đích: So sánh xử lý dữ liệu lớn giữa Single-thread và Multi-thread");
         System.out.println("Task: Tính tổng bình phương của " + DATA_SIZE + " số ngẫu nhiên\n");
@@ -128,8 +134,10 @@ public class DataProcessorDemo {
         int chunkSize = DATA_SIZE / THREAD_COUNT;
         
         for (int i = 0; i < THREAD_COUNT; i++) {
-            int start = i * chunkSize;
-            int end = (i == THREAD_COUNT - 1) ? DATA_SIZE : start + chunkSize;
+            // Sửa lỗi: Copy biến vào final để tránh closure capture sai
+            final int chunkIndex = i;
+            final int start = chunkIndex * chunkSize;
+            final int end = (chunkIndex == THREAD_COUNT - 1) ? DATA_SIZE : start + chunkSize;
             
             Future<ProcessingResult> future = executor.submit(() -> {
                 double sum = 0;
@@ -184,6 +192,13 @@ public class DataProcessorDemo {
         System.out.println("\n--- Performance Comparison ---");
         System.out.println("Đang chạy cả hai phương pháp để so sánh...\n");
         
+        // Hiển thị thông tin CPU
+        int cpuCores = Runtime.getRuntime().availableProcessors();
+        System.out.println("🖥️  CPU Info:");
+        System.out.println("   - Available cores: " + cpuCores);
+        System.out.println("   - Threads used: " + THREAD_COUNT);
+        System.out.println();
+        
         double[] data = generateData(DATA_SIZE);
         
         // Single-threaded
@@ -217,12 +232,21 @@ public class DataProcessorDemo {
             System.out.println("❌ Single-threading nhanh hơn. Có thể do overhead của threads.");
         }
         
-        // Kiểm tra kết quả
+        // Kiểm tra kết quả với thông tin chi tiết
         double difference = Math.abs(singleSum - multiSum);
-        if (difference < 0.01) {
+        double relativeError = (difference / Math.abs(singleSum)) * 100;
+        
+        System.out.println("\n🔍 === PHÂN TÍCH SAI SỐ ===");
+        System.out.println("Sai số tuyệt đối: " + String.format("%.10f", difference));
+        System.out.println("Sai số tương đối: " + String.format("%.10f%%", relativeError));
+        
+        if (difference < 1.0) {
             System.out.println("✅ Kết quả giống nhau - thuật toán chính xác!");
+            System.out.println("   (Sai số nhỏ là do floating point precision khi cộng theo thứ tự khác nhau)");
+        } else if (relativeError < 0.00001) { // Less than 0.00001% error
+            System.out.println("⚠️ Sai số rất nhỏ - có thể do floating point precision");
         } else {
-            System.out.println("❌ Kết quả khác nhau - có lỗi trong thuật toán!");
+            System.out.println("❌ Kết quả khác nhau đáng kể - có lỗi trong thuật toán!");
         }
     }
     
@@ -241,8 +265,10 @@ public class DataProcessorDemo {
         int chunkSize = data.length / THREAD_COUNT;
         
         for (int i = 0; i < THREAD_COUNT; i++) {
-            int start = i * chunkSize;
-            int end = (i == THREAD_COUNT - 1) ? data.length : start + chunkSize;
+            // Sửa lỗi: Copy biến vào final để tránh closure capture sai
+            final int chunkIndex = i;
+            final int start = chunkIndex * chunkSize;
+            final int end = (chunkIndex == THREAD_COUNT - 1) ? data.length : start + chunkSize;
             
             Future<Double> future = executor.submit(() -> {
                 double sum = 0;
