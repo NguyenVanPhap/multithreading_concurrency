@@ -7,14 +7,17 @@
 ## 📚 **THÁNG 1 - Thread & Synchronization Cơ Bản**
 
 ### 🔸 **Tuần 1 - Làm Quen Thread**
-- **Kiến thức**: Thread lifecycle, Thread vs Runnable, Thread methods (start, join, sleep, yield)
+- **Kiến thức**: Thread lifecycle, Thread vs Runnable, Thread methods (start, join, sleep, yield, interrupt)
 - **Thực hành**: 
-  - Tạo 10 threads, mỗi thread in số 1-100
-  - So sánh hiệu năng Thread vs Runnable
-- **🎮 Mini Project**: **Race Simulator** (mô phỏng đua xe)
-  - Nhiều threads = nhiều xe đua
-  - Random movement, track progress real-time
-  - **Learning**: Thread management, timing, interrupt handling
+  - Tạo và quản lý threads với Thread vs Runnable
+  - Demo các methods: join, sleep, yield, interrupt
+  - Demo race condition và synchronized solution
+- **🎮 Mini Projects**: 
+  - **Race Simulator**: Mô phỏng đua xe với nhiều threads, random movement, real-time tracking
+  - **Data Processor Demo**: So sánh single-thread vs multi-thread xử lý 100M số
+    - Demo khi multi-threading hiệu quả (CPU-intensive tasks)
+    - Phân tích floating point precision trong parallel computing
+  - **Learning**: Thread lifecycle, synchronization, performance optimization, closure capture bugs
 
 ### 🔸 **Tuần 2 - Synchronization**
 - **Kiến thức**: Race condition, synchronized keyword, ReentrantLock
