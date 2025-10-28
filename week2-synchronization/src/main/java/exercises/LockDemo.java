@@ -2,6 +2,7 @@ package exercises;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -55,6 +56,12 @@ public class LockDemo {
         List<Thread> threads = new ArrayList<>();
         
         // TODO: Create and start threads
+        for (int i = 0; i < NUM_THREADS; i++) {
+            Thread thread = new Thread(() -> {
+
+            });
+            threads.add(thread);
+        }
         // TODO: Wait for all threads to complete
         
         System.out.println("Final value: " + resource.getValue());
@@ -144,7 +151,13 @@ public class LockDemo {
         // TODO: Implement thread-safe increment
         public void increment() {
             // TODO: Use lock() and unlock() in try-finally
+            lock.lock();
             // TODO: Increment value
+            try {
+                value++;
+            } finally {
+                lock.unlock();
+            }
         }
         
         public int getValue() {
@@ -153,21 +166,34 @@ public class LockDemo {
         
         // TODO: Implement tryLock with timeout
         public boolean tryLock(int seconds) {
+            boolean acquired = false;
             try {
                 // TODO: Use tryLock(timeout) with TimeUnit.SECONDS
+                acquired = lock.tryLock(seconds, TimeUnit.SECONDS);
                 // TODO: Always unlock in finally
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return false;
+            } finally {
+                if (acquired) {
+                    lock.unlock();
+                }
             }
-            return false;
+            return acquired;
         }
         
         // TODO: Implement interruptible operation
         public void someOperation() throws InterruptedException {
-            // TODO: Use lockInterruptibly() instead of lock()
-            // TODO: Do some work
-            // TODO: Always unlock in finally
+            lock.lockInterruptibly(); // Acquire lock in interruptible way
+            try {
+                // TODO: Do some work
+                // Simulate some work with the shared resource
+                value++;
+                // Sleep to simulate work and allow interruption
+                Thread.sleep(1000);
+            } finally {
+                lock.unlock(); // Always unlock in finally
+            }
         }
     }
 }
