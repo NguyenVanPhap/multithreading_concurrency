@@ -162,3 +162,5 @@ java projects.DataProcessorDemo
 - Thread.join() để đợi tất cả threads hoàn thành
 - Thread.interrupt() để dừng thread gracefully
 - **Quan trọng**: Multi-threading không phải lúc nào cũng nhanh hơn!
+
+
