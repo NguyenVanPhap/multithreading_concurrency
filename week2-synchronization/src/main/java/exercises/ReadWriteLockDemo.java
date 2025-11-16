@@ -55,6 +55,15 @@ public class ReadWriteLockDemo {
         
         // TODO: Create reader threads
         // Each reader should read READ_OPERATIONS times
+        for (int i = 0; i < NUM_READERS; i++) {
+            Thread thread = new Thread(() -> {
+                for (int j = 0; j < READ_OPERATIONS; j++) {
+                    counter.increment();
+                }
+            });
+            thread.setName("Thread #" + i);
+            readers.add(thread);
+        }
         
         // TODO: Create writer threads
         // Each writer should write WRITE_OPERATIONS times
