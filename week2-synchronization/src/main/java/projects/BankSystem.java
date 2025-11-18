@@ -3,6 +3,7 @@ package projects;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -58,6 +59,7 @@ public class BankSystem {
         for (int i = 1; i <= NUM_ACCOUNTS; i++) {
             // TODO: Create account
             // TODO: Add to bank
+            BankAccount account = new BankAccount()
         }
         System.out.println("Created " + NUM_ACCOUNTS + " accounts");
     }
@@ -110,6 +112,18 @@ public class BankSystem {
             // TODO: Update balance
             // TODO: Log transaction
             // TODO: Always unlock in finally
+
+            if (amount <= 0 || Double.isNaN(amount) || Double.isInfinite(amount)) {
+               throw new IllegalArgumentException("Amount must be a positive number");
+            }
+            lock.lock();
+            try {
+                balance += amount;
+                System.out.println("Deposited " + amount + " to " + accountId);
+            } finally {
+                lock.unlock();
+            }
+
             return false;
         }
         
@@ -121,6 +135,24 @@ public class BankSystem {
             // TODO: Update balance
             // TODO: Log transaction
             // TODO: Always unlock in finally
+            if(amount <= 0) {
+                System.out.println("Amount must be a positive number");
+                throw new IllegalArgumentException("Amount must be a positive number");
+            }
+            boolean acquired = false;
+            try {
+                acquired = lock.tryLock(2, TimeUnit.SECONDS);
+                if(amount > balance) {
+                    throw new IllegalArgumentException("Insufficient balance");
+                }
+                balance -= amount;
+                System.out.println("Withdrawn " + amount + " from " + accountId);
+            } catch (InterruptedException e) {
+                return false;
+            } finally {
+                if(acquired)
+                    lock.unlock();
+            }
             return false;
         }
         
@@ -129,6 +161,26 @@ public class BankSystem {
             // TODO: If waitForLock, use lock()
             // TODO: Else, use tryLock()
             // TODO: Handle accordingly
+            if(!waitForLock) {
+                return withdraw(amount);
+            }
+
+            if(amount <= 0) {
+                System.out.println("Amount must be a positive number");
+                throw new IllegalArgumentException("Amount must be a positive number");
+            }
+
+
+            try {
+                lock.lock();
+                if(amount > balance) {
+                    throw new IllegalArgumentException("Insufficient balance");
+                }
+                balance -= amount;
+                System.out.println("Withdrawn " + amount + " from " + accountId);
+            } finally {
+                lock.unlock();
+            }
             return false;
         }
         
@@ -146,6 +198,12 @@ public class BankSystem {
             // TODO: Deposit to target account
             // TODO: Log transaction
             // TODO: Unlock both locks in proper order (reverse!)
+
+            boolean acquired = false;
+            try {
+                
+            }
+
             return false;
         }
         
