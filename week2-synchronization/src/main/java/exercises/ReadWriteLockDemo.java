@@ -55,14 +55,55 @@ public class ReadWriteLockDemo {
         
         // TODO: Create reader threads
         // Each reader should read READ_OPERATIONS times
+        for (int i = 0; i < NUM_READERS; i++) {
+            Thread thread = new Thread(() -> {
+                for (int j = 0; j < READ_OPERATIONS; j++) {
+                    int v = counter.read();   // gọi hàm đọc
+                    // Optional: in ra để thấy thread chạy
+                    System.out.println(Thread.currentThread().getName() + " read: " + v);
+                }
+            });
+            thread.setName("Thread reader#" + i);
+            readers.add(thread);
+        }
         
         // TODO: Create writer threads
         // Each writer should write WRITE_OPERATIONS times
-        
+        for (int i = 0; i < NUM_WRITERS; i++) {
+            Thread thread = new Thread(() -> {
+                for (int j = 0; j < WRITE_OPERATIONS; j++) {
+                    counter.increment();
+                }
+            });
+            thread.setName("Thread writer#" + i);
+            writers.add(thread);
+        }
+
+
         long start = System.nanoTime();
         
         // TODO: Start all threads
         // TODO: Wait for all threads to complete
+
+        readers.forEach(Thread::start);
+        writers.forEach(Thread::start);
+
+        for (Thread t : readers) {
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        for (Thread t : writers) {
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
         
         long end = System.nanoTime();
         long duration = (end - start) / 1_000_000;
@@ -97,12 +138,33 @@ public class ReadWriteLockDemo {
         // TODO: Demonstrate downgrading from write lock to read lock
         
         ReadWriteCounter counter = new ReadWriteCounter();
+        ReadWriteLock rwLock = new ReentrantReadWriteLock();
         
         // TODO: Acquire write lock
         // TODO: Do write operations
         // TODO: Downgrade to read lock (without releasing write lock first!)
         // TODO: Do read operations
         // TODO: Unlock read lock
+
+        rwLock.writeLock().lock();
+        try {
+            for (int i = 0; i < NUM_WRITERS; i++) {
+                counter.increment();
+                System.out.println(Thread.currentThread().getName() + " write: " + counter.getValue());
+            }
+            rwLock.readLock().lock();
+        } finally {
+            rwLock.writeLock().unlock();
+        }
+
+        try {
+            for (int i = 0; i < NUM_READERS; i++) {
+                int v = counter.read();
+                System.out.println(Thread.currentThread().getName() + " read: " + v);
+            }
+        } finally {
+            rwLock.readLock().unlock();
+        }
         
         System.out.println("Lock downgrading: Writers can temporarily become readers");
     }
@@ -125,7 +187,12 @@ public class ReadWriteLockDemo {
             // TODO: Acquire read lock
             // TODO: Return value
             // TODO: Always unlock read lock in finally
-            return 0;
+            try {
+                rwLock.readLock().lock();
+                return value;
+            } finally {
+                rwLock.readLock().unlock();
+            }
         }
         
         // TODO: Implement write operation with write lock
@@ -133,6 +200,12 @@ public class ReadWriteLockDemo {
             // TODO: Acquire write lock
             // TODO: Update value
             // TODO: Always unlock write lock in finally
+            try {
+                rwLock.writeLock().lock();
+                value = newValue;
+            } finally {
+                rwLock.writeLock().unlock();
+            }
         }
         
         // TODO: Implement increment operation
@@ -140,6 +213,12 @@ public class ReadWriteLockDemo {
             // TODO: Get write lock
             // TODO: Increment value
             // TODO: Unlock
+            try{
+                rwLock.writeLock().lock();
+                value++;
+            } finally {
+                rwLock.writeLock().unlock();
+            }
         }
         
         public int getValue() {
@@ -150,6 +229,37 @@ public class ReadWriteLockDemo {
         public void readThenUpdate() {
             // TODO: Demonstrate lock upgrade/downgrade
             // Hint: Read → Upgrade to write → Downgrade to read → Unlock read
+            // Note: We use lock downgrading pattern: acquire write lock first,
+            // then downgrade to read lock (without releasing write lock)
+            
+            // Acquire write lock first
+            rwLock.writeLock().lock();
+            try {
+                // Read current value
+                int currentValue = value;
+                System.out.println(Thread.currentThread().getName() + " read value: " + currentValue);
+                
+                // Update value
+                value = currentValue + 1;
+                System.out.println(Thread.currentThread().getName() + " updated value to: " + value);
+                
+                // Downgrade: acquire read lock while holding write lock
+                // This is safe because we already hold the write lock
+                rwLock.readLock().lock();
+            } finally {
+                // Release write lock (downgrade to read lock)
+                rwLock.writeLock().unlock();
+            }
+            
+            // Now we only hold read lock
+            try {
+                // Read value again with read lock
+                int finalValue = value;
+                System.out.println(Thread.currentThread().getName() + " read again with read lock: " + finalValue);
+            } finally {
+                // Release read lock
+                rwLock.readLock().unlock();
+            }
         }
     }
     

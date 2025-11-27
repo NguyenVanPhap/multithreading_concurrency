@@ -17,7 +17,7 @@ public class SyncDemo {
     private static final int NUM_THREADS = 5;
     private static final int INCREMENTS_PER_THREAD = 10000;
     
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         System.out.println("==========================================");
         System.out.println("  Synchronized Keyword Demo");
         System.out.println("==========================================\n");
@@ -39,7 +39,7 @@ public class SyncDemo {
         System.out.println("==========================================");
     }
     
-    private static void testUnsafeCounter() {
+    private static void testUnsafeCounter() throws InterruptedException {
         // TODO: Implement UnsafeCounter
         // Hint: Simple counter without any synchronization
         // Expected: Race condition, final count < NUM_THREADS * INCREMENTS_PER_THREAD
@@ -49,6 +49,26 @@ public class SyncDemo {
         
         // TODO: Create NUM_THREADS threads, each incrementing INCREMENTS_PER_THREAD times
         // TODO: Start and wait for all threads
+
+        for (int i = 0; i < NUM_THREADS; i++) {
+            Thread thread = new Thread(() -> {
+                for (int j = 0; j < INCREMENTS_PER_THREAD; j++) {
+                    counter.increment();
+                }
+            });
+            thread.setName("UnsafeCounter-" + i);
+            threads.add(thread);
+        }
+
+        for (Thread thread : threads) {
+            thread.start();
+            System.out.println("Thread " + thread.getName() + " started");
+        }
+
+        for (Thread thread : threads) {
+            thread.join();
+        }
+
         
         System.out.println("Expected: " + (NUM_THREADS * INCREMENTS_PER_THREAD));
         System.out.println("Actual: " + counter.getCount());
@@ -56,7 +76,7 @@ public class SyncDemo {
             (counter.getCount() != NUM_THREADS * INCREMENTS_PER_THREAD));
     }
     
-    private static void testSynchronizedCounter() {
+    private static void testSynchronizedCounter() throws InterruptedException {
         // TODO: Implement SynchronizedCounter
         // Hint: Use synchronized keyword on increment method
         // Expected: Correct final count = NUM_THREADS * INCREMENTS_PER_THREAD
@@ -66,6 +86,25 @@ public class SyncDemo {
         
         // TODO: Create NUM_THREADS threads, each incrementing INCREMENTS_PER_THREAD times
         // TODO: Start and wait for all threads
+
+        for (int i = 0; i < NUM_THREADS; i++) {
+            Thread thread = new Thread(() -> {
+                for (int j = 0; j < INCREMENTS_PER_THREAD; j++) {
+                    counter.increment();
+                }
+            });
+            thread.setName("UnsafeCounter-" + i);
+            threads.add(thread);
+        }
+
+        for (Thread thread : threads) {
+            thread.start();
+            System.out.println("Thread " + thread.getName() + " started");
+        }
+
+        for (Thread thread : threads) {
+            thread.join();
+        }
         
         System.out.println("Expected: " + (NUM_THREADS * INCREMENTS_PER_THREAD));
         System.out.println("Actual: " + counter.getCount());
@@ -104,6 +143,7 @@ public class SyncDemo {
         public void increment() {
             // TODO: Just increment count
             // This is not atomic! Multiple threads can read the same value
+            count++;
         }
         
         public int getCount() {
@@ -119,6 +159,7 @@ public class SyncDemo {
         // TODO: Implement increment() with synchronized keyword
         public synchronized void increment() {
             // TODO: Synchronized increment - only one thread at a time
+            count++;
         }
         
         public synchronized int getCount() {
