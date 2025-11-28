@@ -53,6 +53,21 @@ public class DeadlockDemo {
             // TODO: Acquire lock1, then lock2
             // TODO: Sử dụng try-finally để đảm bảo unlock
             // TODO: Thêm sleep để simulate work và tăng khả năng deadlock
+            lock1.lock();
+            try {
+                // Mô phỏng công việc với thời gian ngủ dài hơn
+                try {
+                    Thread.sleep(100); // THAY ĐỔI: lâu hơn để tăng khả năng deadlock
+                    lock2.lock();
+                    System.out.println(Thread.currentThread().getName() + " đã chiếm cả hai khóa.");
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    lock2.unlock(); // Đảm bảo giải phóng lock2
+                }
+            } finally {
+                lock1.unlock(); // Đảm bảo giải phóng lock1
+            }
         });
         
         // TODO: Tạo Thread 2 - Acquire lock2, sau đó lock1 (OPPOSITE ORDER - causes deadlock!)
@@ -60,6 +75,21 @@ public class DeadlockDemo {
             // TODO: Acquire lock2, then lock1 (OPPOSITE ORDER!)
             // TODO: Sử dụng try-finally để đảm bảo unlock
             // TODO: Thêm sleep để simulate work
+            lock2.lock();
+            try {
+                // Mô phỏng công việc với thời gian ngủ dài hơn
+                try {
+                    Thread.sleep(100); // THAY ĐỔI: lâu hơn để tăng khả năng deadlock
+                    lock1.lock();
+                    System.out.println(Thread.currentThread().getName() + " đã chiếm cả hai khóa.");
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    lock1.unlock(); // Đảm bảo giải phóng lock1
+                }
+            } finally {
+                lock2.unlock(); // Đảm bảo giải phóng lock2
+            }
         });
         
         thread1.setName("Thread-1");
@@ -69,6 +99,23 @@ public class DeadlockDemo {
         // TODO: Wait for threads (they will deadlock, so this will hang)
         // TODO: Sử dụng join với timeout để phát hiện deadlock
         // TODO: Kiểm tra nếu threads còn alive sau timeout -> deadlock detected
+
+        thread1.start();
+        thread2.start();
+
+        try {
+            thread1.join();
+            thread2.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        // Kiểm tra deadlock
+        if (thread1.isAlive() && thread2.isAlive()) {
+            System.out.println("Deadlock detected between Thread-1 and Thread-2!");
+        } else {
+            System.out.println("No deadlock detected.");
+        }
+
     }
     
     /**

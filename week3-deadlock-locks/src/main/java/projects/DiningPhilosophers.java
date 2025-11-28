@@ -331,14 +331,16 @@ public class DiningPhilosophers {
                         // TODO: Release in reverse order (theo strategy đã dùng)
                     }
                 }
-            } catch (InterruptedException e) {
+            } /*catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+            }*/ catch (Exception e) {
+                throw new RuntimeException(e);
             }
         }
         
-        public int getId() {
+     /*   public int getId() {
             return id;
-        }
+        }*/
         
         public int getEatCount() {
             return eatCount;

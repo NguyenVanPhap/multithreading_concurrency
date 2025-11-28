@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
+import java.util.stream.Collectors;
 
 /**
  * Project 2: Resource Manager
@@ -293,7 +294,7 @@ public class ResourceManager {
      * TODO: Implement ResourceManager class
      */
     static class Manager {
-        private final Map<Integer, Lock> resources;
+        private final Map<Integer, ReentrantLock> resources;
         private final Map<Integer, Thread> resourceOwners;
         private final AtomicBoolean deadlockDetected;
         
@@ -305,6 +306,7 @@ public class ResourceManager {
             // TODO: Initialize resources với ReentrantLock
             for (int i = 0; i < numResources; i++) {
                 // TODO: Put ReentrantLock vào map
+                resources.put(i, new ReentrantLock());
             }
         }
         
@@ -313,7 +315,7 @@ public class ResourceManager {
          */
         public boolean acquireResources(List<Integer> resourceIds, long timeoutMs) throws InterruptedException {
             // TODO: Sort resource IDs để đảm bảo consistent ordering (tránh deadlock)
-            List<Integer> sortedIds = null; // TODO: Sort resourceIds
+            List<Integer> sortedIds = resourceIds.stream().sorted(Comparator.reverseOrder()).toList(); // TODO: Sort resourceIds
             
             List<Lock> acquiredLocks = new ArrayList<>();
             long deadline = System.currentTimeMillis() + timeoutMs;
@@ -324,8 +326,22 @@ public class ResourceManager {
                 // TODO: Nếu timeout -> release all acquired locks và return false
                 // TODO: Nếu thành công -> add vào acquiredLocks và track owner
                 // TODO: Nếu tất cả thành công -> return true
+                for (Integer id : sortedIds) {
+                    ReentrantLock lock = resources.get(id);
+                    long remainingTime = deadline - System.currentTimeMillis();
+                    if (remainingTime <= 0 || !lock.tryLock(remainingTime, TimeUnit.MILLISECONDS)) {
+                        releaseAcquiredLocks(acquiredLocks);
+                        return false;
+                    } else {
+                        acquiredLocks.add(lock);
+                        resourceOwners.put(id, Thread.currentThread());
+                    }
+                }
+                return true;
+
             } catch (InterruptedException e) {
                 // TODO: Release all acquired locks
+                releaseAcquiredLocks(acquiredLocks);
                 Thread.currentThread().interrupt();
                 throw e;
             }
@@ -337,6 +353,15 @@ public class ResourceManager {
         public void releaseResources(List<Integer> resourceIds) {
             // TODO: Sort và release theo reverse order
             // TODO: Unlock từng lock và remove từ resourceOwners
+            resourceIds.sort(Comparator.reverseOrder());
+
+            for (Integer id : resourceIds) {
+                ReentrantLock lock = resources.get(id);
+                if(lock!=null && lock.isHeldByCurrentThread()) {
+                    lock.unlock();
+                    resourceOwners.remove(id);
+                }
+            }
         }
         
         private void releaseAcquiredLocks(List<Lock> locks) {
