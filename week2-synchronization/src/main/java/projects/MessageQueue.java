@@ -79,6 +79,17 @@ public class MessageQueue {
                 // TODO: Produce MESSAGES_PER_PRODUCER messages
                 // TODO: Each message should have format: "Producer-X: Message-Y"
                 // TODO: Use put() method
+
+                for (int j = 1; j <= MESSAGES_PER_PRODUCER; j++) {
+                    String message = "Producer-" + producerId + ": Message-" + j;
+                    try {
+                        queue.put(message);
+                        System.out.println("Produced: " + message);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+
                 
             }, "Producer-" + producerId);
             
@@ -100,6 +111,19 @@ public class MessageQueue {
                 // TODO: Use take() method
                 // TODO: Process messages until shutdown and queue empty
                 // TODO: Print consumed messages
+
+                while (true) {
+                    try {
+                        String message = queue.take();
+                        if (message != null) {
+                            System.out.println("Consumed by " + Thread.currentThread().getName() + ": " + message);
+                        } else if (queue.isShutdown() && queue.isEmpty()) {
+                            break;
+                        }
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
                 
             }, "Consumer-" + consumerId);
             
@@ -149,7 +173,9 @@ public class MessageQueue {
             try {
                 while (queue.size() == capacity && !isShutdown) {
                     // TODO: Wait for space
+                    blockedProducers++;
                     notFull.await();
+                    blockedProducers--;
                 }
                 
                 if (isShutdown) {
@@ -159,6 +185,10 @@ public class MessageQueue {
                 // TODO: Add message
                 // TODO: Signal consumers
                 // TODO: Update stats
+
+                queue.add(message);
+                notEmpty.signal();
+                totalProduced++;
             } finally {
                 lock.unlock();
             }
@@ -172,7 +202,27 @@ public class MessageQueue {
             // TODO: Signal notFull
             // TODO: Update statistics
             // TODO: Always unlock in finally
-            
+
+            lock.lock();
+            try {
+                if (queue.isEmpty() && !isShutdown) {
+                    blockedConsumers++;
+                    notEmpty.await();
+                    blockedConsumers--;
+                }
+
+                if (!queue.isEmpty()) {
+                    T message = queue.poll();
+                    notFull.signal();
+                    totalConsumed++;
+                    return message;
+                }
+
+                blockedConsumers++;
+            } finally {
+                lock.unlock();
+            }
+
             return null;
         }
         
@@ -180,6 +230,14 @@ public class MessageQueue {
         public void shutdown() {
             // TODO: Set isShutdown to true
             // TODO: Signal all waiting threads
+            lock.lock();
+            try {
+                isShutdown = true;
+                notFull.signalAll();
+                notEmpty.signalAll();
+            } finally {
+                lock.unlock();
+            }
         }
         
         public boolean isShutdown() {
@@ -208,6 +266,8 @@ public class MessageQueue {
             System.out.println("Blocked producers: " + blockedProducers);
             System.out.println("Blocked consumers: " + blockedConsumers);
             // TODO: Add more detailed statistics
+            System.out.println("=========================");
+
         }
     }
 }
