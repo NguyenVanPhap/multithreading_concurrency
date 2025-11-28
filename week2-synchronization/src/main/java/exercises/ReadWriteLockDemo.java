@@ -121,11 +121,50 @@ public class ReadWriteLockDemo {
         
         // TODO: Create same number of reader and writer threads
         // TODO: Each thread does same number of operations
+
+        for (int i = 0; i < NUM_READERS; i++) {
+            Thread thread = new Thread(() -> {
+                for (int j = 0; j < READ_OPERATIONS; j++) {
+                    int v = counter.read();
+                    // Optional: in ra để thấy thread chạy
+                    System.out.println(Thread.currentThread().getName() + " read: " + v);
+                }
+            });
+            thread.setName("Thread reader#" + i);
+            readers.add(thread);
+        }
+
+        for (int i = 0; i < NUM_WRITERS; i++) {
+            Thread thread = new Thread(() -> {
+                for (int j = 0; j < WRITE_OPERATIONS; j++) {
+                    counter.increment();
+                }
+            });
+            thread.setName("Thread writer#" + i);
+            writers.add(thread);
+        }
         
         long start = System.nanoTime();
         
         // TODO: Start all threads
         // TODO: Wait for all threads to complete
+
+        readers.forEach(Thread::start);
+        writers.forEach(Thread::start);
+        for (Thread t : readers) {
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        for (Thread t : writers) {
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
         
         long end = System.nanoTime();
         long duration = (end - start) / 1_000_000;

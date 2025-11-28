@@ -59,7 +59,8 @@ public class BankSystem {
         for (int i = 1; i <= NUM_ACCOUNTS; i++) {
             // TODO: Create account
             // TODO: Add to bank
-            BankAccount account = new BankAccount()
+            BankAccount account = new BankAccount("acc_"+i, INITIAL_BALANCE);
+            bank.addAccount(account);
         }
         System.out.println("Created " + NUM_ACCOUNTS + " accounts");
     }
@@ -74,19 +75,64 @@ public class BankSystem {
                 // - Deposit random amount
                 // - Withdraw random amount
                 // - Transfer between random accounts
+                ThreadLocalRandom rand = ThreadLocalRandom.current();
+                for (int j = 0; j < NUM_TRANSACTIONS; j++) {
+                    int action = rand.nextInt(3);
+                    String accId1 = "acc_" + (rand.nextInt(NUM_ACCOUNTS) + 1);
+                    BankAccount account1 = bank.getAccount(accId1);
+                    double amount = rand.nextDouble(1, 500);
+                    System.out.println("Thread " + Thread.currentThread().getName() + " performing action " + action + " on " + accId1 + " amount " + amount);
+
+                    try {
+                        switch (action) {
+                            case 0: // Deposit
+                                account1.deposit(amount);
+                                break;
+                            case 1: // Withdraw
+                                account1.withdraw(amount);
+                                break;
+                            case 2: // Transfer
+                                String accId2;
+                                do {
+                                    accId2 = "acc_" + (rand.nextInt(NUM_ACCOUNTS) + 1);
+                                } while (accId2.equals(accId1));
+                                BankAccount account2 = bank.getAccount(accId2);
+                                account1.transfer(account2, amount);
+                                break;
+
+                        }
+                    } catch (InterruptedException | IllegalArgumentException e) {
+                        System.out.println("Transaction failed: " + e.getMessage());
+                    }
+                }
             });
             threads.add(thread);
         }
         
         // TODO: Start and wait for all threads
+        threads.forEach(Thread::start);
+        for (Thread t : threads) {
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
     
     private static void displayBalances(Bank bank) {
         // TODO: Display all account balances
+        for (BankAccount account : bank.getAllAccounts()) {
+            System.out.println("Account " + account.getAccountId() + ": Balance = " + account.getBalance());
+        }
     }
     
     private static void displayRecentTransactions(Bank bank) {
         // TODO: Display last 10 transactions
+        List<Transaction> recent = bank.getRecentTransactions(10);
+        for (Transaction tx : recent) {
+            System.out.println(tx);
+        }
     }
     
     // TODO: Implement BankAccount class
@@ -112,6 +158,7 @@ public class BankSystem {
             // TODO: Update balance
             // TODO: Log transaction
             // TODO: Always unlock in finally
+            System.out.println("Depositing " + amount + " to " + accountId);
 
             if (amount <= 0 || Double.isNaN(amount) || Double.isInfinite(amount)) {
                throw new IllegalArgumentException("Amount must be a positive number");
@@ -120,6 +167,7 @@ public class BankSystem {
             try {
                 balance += amount;
                 System.out.println("Deposited " + amount + " to " + accountId);
+                transactions.add(new Transaction("DEPOSIT", accountId, accountId, amount, true));
             } finally {
                 lock.unlock();
             }
@@ -135,6 +183,7 @@ public class BankSystem {
             // TODO: Update balance
             // TODO: Log transaction
             // TODO: Always unlock in finally
+            System.out.println("Withdrawing " + amount + " from " + accountId);
             if(amount <= 0) {
                 System.out.println("Amount must be a positive number");
                 throw new IllegalArgumentException("Amount must be a positive number");
@@ -147,6 +196,7 @@ public class BankSystem {
                 }
                 balance -= amount;
                 System.out.println("Withdrawn " + amount + " from " + accountId);
+                transactions.add(new Transaction("WITHDRAW", accountId, accountId, amount, true));
             } catch (InterruptedException e) {
                 return false;
             } finally {
@@ -161,6 +211,7 @@ public class BankSystem {
             // TODO: If waitForLock, use lock()
             // TODO: Else, use tryLock()
             // TODO: Handle accordingly
+            System.out.println("Withdrawing " + amount + " from " + accountId);
             if(!waitForLock) {
                 return withdraw(amount);
             }
@@ -178,6 +229,7 @@ public class BankSystem {
                 }
                 balance -= amount;
                 System.out.println("Withdrawn " + amount + " from " + accountId);
+                transactions.add(new Transaction("WITHDRAW", accountId, accountId, amount, true));
             } finally {
                 lock.unlock();
             }
@@ -198,10 +250,24 @@ public class BankSystem {
             // TODO: Deposit to target account
             // TODO: Log transaction
             // TODO: Unlock both locks in proper order (reverse!)
+            System.out.println("Transferring " + amount + " from " + this.accountId + " to " + target.accountId);
 
-            boolean acquired = false;
+            this.lock.lock();
             try {
-                
+                target.lock.lock();
+                try {
+                    if(amount > this.balance) {
+                        throw new IllegalArgumentException("Insufficient balance");
+                    }
+                    this.balance -= amount;
+                    target.balance += amount;
+                    System.out.println("Transferred " + amount + " from " + this.accountId + " to " + target.accountId);
+                    Transaction tx = new Transaction("TRANSFER", this.accountId, target.accountId, amount, true);
+                } finally {
+                    target.lock.unlock();
+                }
+            } finally {
+                this.lock.unlock();
             }
 
             return false;
@@ -211,7 +277,12 @@ public class BankSystem {
         public double getBalance() {
             // TODO: Use read lock or synchronized read
             // TODO: Return current balance
-            return 0.0;
+            try {
+                lock.lock();
+                return balance;
+            } finally {
+                lock.unlock();
+            }
         }
         
         public String getAccountId() {
@@ -221,13 +292,18 @@ public class BankSystem {
         // TODO: Implement transaction history
         public List<Transaction> getTransactionHistory() {
             // TODO: Return copy of transaction list
-            return null;
+            try {
+                lock.lock();
+                return new ArrayList<>(transactions);
+            } finally {
+                lock.unlock();
+            }
         }
         
         // Helper method to determine lock order
         public boolean isBefore(BankAccount other) {
             // TODO: Compare accountId to determine lock order
-            return false;
+            return this.accountId.compareTo(other.accountId) < 0;
         }
     }
     
