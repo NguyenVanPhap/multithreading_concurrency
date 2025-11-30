@@ -1,5 +1,6 @@
 package exercises;
 
+import java.lang.management.ThreadInfo;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.lang.management.ManagementFactory;
@@ -104,8 +105,8 @@ public class DeadlockDemo {
         thread2.start();
 
         try {
-            thread1.join();
-            thread2.join();
+            thread1.join(500);
+            thread2.join(500);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -126,16 +127,82 @@ public class DeadlockDemo {
         ThreadMXBean threadMX = null; // TODO: Get from ManagementFactory
         
         // TODO: Tạo deadlock scenario (tương tự testDeadlock)
-        Thread thread1 = null; // TODO: Create thread với lock1 -> lock2
-        Thread thread2 = null; // TODO: Create thread với lock2 -> lock1
-        
+        //Thread thread1 = null; // TODO: Create thread với lock1 -> lock2
+
+        Thread thread1 = new Thread(() -> {
+            lock1.lock();
+            try {
+                try {
+                    Thread.sleep(100);
+                    lock2.lock();
+                    System.out.println(Thread.currentThread().getName()+ " held bold two lock");
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    lock2.unlock();
+                }
+
+            } finally {
+                lock1.unlock();
+            }
+        });
+        //Thread thread2 = null; // TODO: Create thread với lock2 -> lock1
+        Thread thread2 = new Thread(() -> {
+            lock2.lock();
+            try {
+                try {
+                    Thread.sleep(100);
+                    lock1.lock();
+                    System.out.println(Thread.currentThread().getName()+ " held bold two lock");
+                } catch (InterruptedException e){
+                    Thread.currentThread().interrupt();
+                } finally {
+                    lock1.unlock();
+                }
+            } finally {
+                lock2.unlock();
+            }
+        });
+        thread1.setName("Thread-1");
+        thread2.setName("Thread-2");
+
+
+        thread1.start();
+        thread2.start();
         // TODO: Start threads
         // TODO: Wait một chút để deadlock xảy ra
-        
+
+
+        try{
+            thread1.join(500);
+            thread2.join(500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         // TODO: Sử dụng ThreadMXBean.findDeadlockedThreads() để phát hiện deadlock
         // TODO: Kiểm tra kết quả và in ra thread names nếu có deadlock
-        
+
+        ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
+        long[] deadlockedThreads= threadMXBean.findDeadlockedThreads();
+
+        if(deadlockedThreads != null && deadlockedThreads.length > 0){
+            ThreadInfo[] infos = threadMXBean.getThreadInfo(deadlockedThreads);
+
+            for (ThreadInfo threadInfo : infos) {
+                if (threadInfo != null) {
+                    System.out.println("Deadlocked thread id:"+ threadInfo.getThreadId() +" name:"
+                            + threadInfo.getThreadName()+ "state:" + threadInfo.getThreadState()
+                            + "lockInfo: "+ threadInfo.getLockInfo());
+                }
+            }
+        }
+
+
+
         // TODO: Interrupt threads để dừng chúng
+        thread1.interrupt();
+        thread2.interrupt();
     }
     
     /**
@@ -143,18 +210,45 @@ public class DeadlockDemo {
      * Luôn acquire locks theo cùng một thứ tự: lock1 -> lock2
      */
     private static void testDeadlockPrevention() {
+
+        Lock safelock1 = new ReentrantLock();
+        Lock safelock2 = new ReentrantLock();
+
         // TODO: Tạo Thread 1 - Acquire locks theo thứ tự: lock1 -> lock2
         Thread thread1 = new Thread(() -> {
-            // TODO: Acquire lock1, then lock2 (CÙNG thứ tự!)
-            // TODO: Sử dụng try-finally
-            // TODO: In ra messages để track progress
+            safelock1.lock();
+            try {
+                try {
+                    Thread.sleep(100);
+                    safelock2.lock();
+                    System.out.println(Thread.currentThread().getName()+ " held bold two lock");
+                } catch (InterruptedException e){
+                    Thread.currentThread().interrupt();
+                } finally {
+                    safelock2.unlock();
+                }
+            } finally {
+                safelock1.unlock();
+            }
         });
         
         // TODO: Tạo Thread 2 - Acquire locks theo CÙNG thứ tự: lock1 -> lock2 (NOT lock2 -> lock1!)
+
         Thread thread2 = new Thread(() -> {
-            // TODO: Acquire lock1, then lock2 (CÙNG thứ tự như thread1!)
-            // TODO: Sử dụng try-finally
-            // TODO: In ra messages để track progress
+            safelock1.lock();
+            try {
+                try {
+                    Thread.sleep(100);
+                    safelock2.lock();
+                    System.out.println(Thread.currentThread().getName()+ " held bold two lock");
+                } catch (InterruptedException e){
+                    Thread.currentThread().interrupt();
+                } finally {
+                    safelock2.unlock();
+                }
+            } finally {
+                safelock1.unlock();
+            }
         });
         
         thread1.setName("Thread-1-Safe");
@@ -163,6 +257,42 @@ public class DeadlockDemo {
         // TODO: Start threads và measure time
         // TODO: Wait for completion
         // TODO: In ra thời gian hoàn thành
+
+        long start = System.nanoTime();
+
+        thread1.start();
+        thread2.start();
+
+        try {
+            thread1.join();
+            thread2.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+
+        long end = System.nanoTime();
+        long durationMs = (end - start) / 1_000_000;
+
+        ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
+        long[] deadlockedThreads= threadMXBean.findDeadlockedThreads();
+
+        if(deadlockedThreads != null && deadlockedThreads.length > 0){
+            ThreadInfo[] infos = threadMXBean.getThreadInfo(deadlockedThreads);
+
+            for (ThreadInfo threadInfo : infos) {
+                if (threadInfo != null) {
+                    System.out.println("Deadlocked thread id:"+ threadInfo.getThreadId() +" name:"
+                            + threadInfo.getThreadName()+ "state:" + threadInfo.getThreadState()
+                            + "lockInfo: "+ threadInfo.getLockInfo());
+                }
+            }
+        }
+
+
+        System.out.println("Execution time = " + durationMs + " ms");
     }
 }
 
