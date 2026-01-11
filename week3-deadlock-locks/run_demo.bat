@@ -41,11 +41,7 @@ echo === Running LockOrderingDemo ===
 mvn compile exec:java -Dexec.mainClass="exercises.LockOrderingDemo"
 goto menu
 
-:timeout
-echo.
-echo === Running TimeoutLockDemo ===
-mvn compile exec:java -Dexec.mainClass="exercises.TimeoutLockDemo"
-goto menu
+
 
 :philosophers
 echo.
