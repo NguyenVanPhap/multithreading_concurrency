@@ -22,21 +22,16 @@ public class ExecutorCompletableFutureDemo {
         System.out.println("==========================================\n");
         
         // TODO: Tạo ExecutorService
-        ExecutorService executor = Executors.newFixedThreadPool(5);
-        
-        try {
-            // Demo 1: Basic usage
-            demoBasicUsage(executor);
-            
-            // Demo 2: Chaining
-            demoChaining(executor);
-            
-            // Demo 3: Combining
-            demoCombining(executor);
-            
-        } finally {
-            executor.shutdown();
-        }
+        // Hướng dẫn:
+        //  1. Chọn số lượng thread phù hợp (ví dụ: 5)
+        //  2. Dùng Executors.newFixedThreadPool(...) để tạo ExecutorService
+        //  3. Đảm bảo shutdown() executor ở cuối chương trình (trong finally)
+
+        // TODO: Gọi các demo bên dưới để chạy thử
+        // Hướng dẫn:
+        //  1. Gọi demoBasicUsage(executor);
+        //  2. Gọi demoChaining(executor);
+        //  3. Gọi demoCombining(executor);
         
         System.out.println("\n==========================================");
         System.out.println("  Demo completed!");
@@ -48,18 +43,12 @@ public class ExecutorCompletableFutureDemo {
         System.out.println("-------------------");
         
         // TODO: Tạo CompletableFuture với custom executor
-        CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
-            try {
-                Thread.sleep(500);
-                return "Hello from async task";
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return "Interrupted";
-            }
-        }, executor);
-        
-        String result = future.join();
-        System.out.println("Result: " + result + "\n");
+        // Hướng dẫn:
+        //  1. Dùng CompletableFuture.supplyAsync(supplier, executor)
+        //  2. Trong supplier, giả lập công việc mất 500ms (Thread.sleep)
+        //  3. Return một chuỗi kết quả, ví dụ: "Hello from async task"
+        //  4. Dùng future.join() để lấy kết quả và in ra
+        throw new UnsupportedOperationException("TODO: implement demoBasicUsage");
     }
     
     private static void demoChaining(ExecutorService executor) {
@@ -67,12 +56,12 @@ public class ExecutorCompletableFutureDemo {
         System.out.println("----------------------------");
         
         // TODO: Chain operations
-        CompletableFuture<String> future = CompletableFuture
-            .supplyAsync(() -> "hello", executor)
-            .thenApply(s -> s.toUpperCase())
-            .thenApply(s -> s + " WORLD");
-        
-        System.out.println("Chained result: " + future.join() + "\n");
+        // Hướng dẫn:
+        //  1. Bắt đầu bằng supplyAsync(() -> "hello", executor)
+        //  2. thenApply để chuyển thành chữ hoa
+        //  3. thenApply tiếp để nối thêm " WORLD"
+        //  4. join() và in kết quả ra console
+        throw new UnsupportedOperationException("TODO: implement demoChaining");
     }
     
     private static void demoCombining(ExecutorService executor) {
@@ -80,16 +69,12 @@ public class ExecutorCompletableFutureDemo {
         System.out.println("-------------------------");
         
         // TODO: Combine multiple futures
-        CompletableFuture<String> f1 = CompletableFuture
-            .supplyAsync(() -> "Result1", executor);
-        CompletableFuture<String> f2 = CompletableFuture
-            .supplyAsync(() -> "Result2", executor);
-        
-        CompletableFuture<String> combined = f1.thenCombine(
-            f2, (r1, r2) -> r1 + " + " + r2
-        );
-        
-        System.out.println("Combined: " + combined.join() + "\n");
+        // Hướng dẫn:
+        //  1. Tạo hai CompletableFuture<String> f1, f2 bằng supplyAsync với executor
+        //  2. Dùng thenCombine(f2, (r1, r2) -> ...) để kết hợp kết quả của f1 và f2
+        //  3. Trong lambda kết hợp, tạo chuỗi dạng "Result1 + Result2"
+        //  4. join() trên future đã combine và in ra
+        throw new UnsupportedOperationException("TODO: implement demoCombining");
     }
 }
 

@@ -36,207 +36,154 @@ public class AsyncServiceOrchestrator {
     // Circuit breaker state
     private final Map<String, CircuitBreaker> circuitBreakers = new ConcurrentHashMap<>();
     
-    // Statistics
+    // Statistics tổng thể
     private final AtomicInteger totalCalls = new AtomicInteger(0);
     private final AtomicInteger successCalls = new AtomicInteger(0);
     private final AtomicInteger failedCalls = new AtomicInteger(0);
     private final AtomicInteger retryCount = new AtomicInteger(0);
     
+    // Advanced: per-service config & metrics (cho bạn tự triển khai thêm)
+    // TODO: dùng map này để lưu config từng service (timeout, priority, loại IO/CPU, maxRetries,...)
+    private final Map<String, ServiceConfig> serviceConfigs = new ConcurrentHashMap<>();
+    
+    /**
+     * TODO: Khởi tạo các executors.
+     * Hướng dẫn:
+     *  - ioExecutor: Executors.newFixedThreadPool(20) cho I/O operations
+     *  - cpuExecutor: Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()) cho CPU operations
+     *  - scheduledExecutor: Executors.newScheduledThreadPool(5) cho scheduled tasks (retry scheduling)
+     */
     public AsyncServiceOrchestrator() {
-        // TODO: Initialize executors
-        // ioExecutor: 20 threads cho I/O operations
-        // cpuExecutor: số cores cho CPU operations
-        // scheduledExecutor: 5 threads cho scheduled tasks
-        
-        this.ioExecutor = Executors.newFixedThreadPool(20);
-        this.cpuExecutor = Executors.newFixedThreadPool(
-            Runtime.getRuntime().availableProcessors()
-        );
-        this.scheduledExecutor = Executors.newScheduledThreadPool(5);
+        throw new UnsupportedOperationException("TODO: implement constructor - initialize executors");
+    }
+    
+    // =========================
+    // Service registration API
+    // =========================
+    
+    /**
+     * Đăng ký service với config chi tiết.
+     * Gợi ý:
+     * - Lưu config vào serviceConfigs
+     * - Khởi tạo sẵn CircuitBreaker cho service đó
+     * - (Nâng cao) Gán executor chuyên biệt cho từng service (bulkhead pattern)
+     */
+    public void registerService(String serviceName, long timeoutMs, int priority, boolean cpuBound) {
+        // TODO: implement registerService
+        // Ví dụ:
+        // - serviceConfigs.put(serviceName, new ServiceConfig(...));
+        // - circuitBreakers.putIfAbsent(serviceName, new CircuitBreaker());
+        // - (nâng cao) tạo Executor riêng cho service ưu tiên cao
+        throw new UnsupportedOperationException("TODO: registerService");
     }
     
     /**
-     * Gọi nhiều services song song và kết hợp kết quả
+     * Lấy config hiện tại của 1 service.
+     * TODO: xử lý trường hợp chưa đăng ký service (trả default config hoặc Optional).
+     */
+    public ServiceConfig getServiceConfig(String serviceName) {
+        // TODO: return config phù hợp hoặc default
+        throw new UnsupportedOperationException("TODO: getServiceConfig");
+    }
+    
+    /**
+     * Cho phép override timeout của 1 service lúc runtime.
+     * Gợi ý use-case: khi phát hiện service chậm, bạn có thể tăng timeout tạm thời.
+     */
+    public void overrideTimeout(String serviceName, long newTimeoutMs) {
+        // TODO: update timeout trong ServiceConfig
+        // Gợi ý: serviceConfigs.computeIfPresent(...)
+        throw new UnsupportedOperationException("TODO: overrideTimeout");
+    }
+    
+    /**
+     * (Nâng cao) Dump toàn bộ thông tin debug hiện tại của orchestrator:
+     * - State của từng CircuitBreaker
+     * - Thống kê calls/retries theo từng service
+     * - Cấu hình timeout/priority hiện tại
+     */
+    public void dumpDebugInfo() {
+        // TODO: in ra console hoặc build JSON string
+        throw new UnsupportedOperationException("TODO: dumpDebugInfo");
+    }
+    
+    /**
+     * TODO: Gọi nhiều services song song và kết hợp kết quả.
+     * Hướng dẫn:
+     *  1. Tăng totalCalls với số lượng requests
+     *  2. Tạo CompletableFuture cho mỗi service call bằng cách gọi callServiceWithRetry(request)
+     *  3. Dùng CompletableFuture.allOf() để đợi tất cả futures hoàn thành
+     *  4. Dùng thenApply() để aggregate kết quả:
+     *     - Lấy tất cả ServiceResponse từ futures
+     *     - Đếm số success và collect danh sách errors
+     *     - Tạo OrchestrationResult với responses, successCount, errors
      */
     public CompletableFuture<OrchestrationResult> orchestrateServices(
             List<ServiceRequest> requests) {
-        
-        totalCalls.addAndGet(requests.size());
-        
-        // TODO: Tạo CompletableFuture cho mỗi service call
-        // TODO: Apply timeout, retry, và circuit breaker
-        // TODO: Combine tất cả results với allOf
-        // TODO: Aggregate errors nếu có
-        
-        List<CompletableFuture<ServiceResponse>> futures = requests.stream()
-            .map(request -> callServiceWithRetry(request))
-            .collect(Collectors.toList());
-        
-        CompletableFuture<Void> allFutures = CompletableFuture.allOf(
-            futures.toArray(new CompletableFuture[0])
-        );
-        
-        return allFutures.thenApply(v -> {
-            List<ServiceResponse> responses = futures.stream()
-                .map(CompletableFuture::join)
-                .collect(Collectors.toList());
-            
-            long successCount = responses.stream()
-                .filter(r -> r.isSuccess())
-                .count();
-            
-            List<String> errors = responses.stream()
-                .filter(r -> !r.isSuccess())
-                .map(r -> r.getError())
-                .collect(Collectors.toList());
-            
-            return new OrchestrationResult(responses, successCount, errors);
-        });
+        throw new UnsupportedOperationException("TODO: implement orchestrateServices");
     }
     
     /**
-     * Gọi service với retry và circuit breaker
+     * TODO: Gọi service với retry và circuit breaker.
+     * Hướng dẫn:
+     *  1. Lấy CircuitBreaker cho service này (tạo mới nếu chưa có)
+     *  2. Kiểm tra CircuitBreaker state:
+     *     - Nếu OPEN: return CompletableFuture.completedFuture với ServiceResponse.failure()
+     *     - Nếu CLOSED hoặc HALF_OPEN: tiếp tục
+     *  3. Tạo CompletableFuture bằng CompletableFuture.supplyAsync(() -> callService(request), ioExecutor)
+     *  4. Áp dụng timeout: cf.orTimeout(request.getTimeoutMs(), TimeUnit.MILLISECONDS)
+     *  5. Handle kết quả:
+     *     - Nếu thành công: cb.recordSuccess(), successCalls.incrementAndGet(), return response
+     *     - Nếu thất bại: cb.recordFailure(), gọi retryWithBackoff(request, cb, 0)
      */
     private CompletableFuture<ServiceResponse> callServiceWithRetry(
             ServiceRequest request) {
-        
-        CircuitBreaker cb = circuitBreakers.computeIfAbsent(
-            request.getServiceName(), 
-            k -> new CircuitBreaker()
-        );
-        
-        // TODO: Check circuit breaker state
-        // TODO: Nếu OPEN, return failure ngay
-        // TODO: Nếu CLOSED hoặc HALF_OPEN, thử gọi service
-        
-        if (cb.isOpen()) {
-            return CompletableFuture.completedFuture(
-                ServiceResponse.failure(request.getServiceName(), 
-                    "Circuit breaker is OPEN")
-            );
-        }
-        
-        return CompletableFuture
-            .supplyAsync(() -> callService(request), ioExecutor)
-            .orTimeout(request.getTimeoutMs(), TimeUnit.MILLISECONDS)
-            .handle((response, throwable) -> {
-                if (throwable != null || !response.isSuccess()) {
-                    // TODO: Retry với exponential backoff
-                    // TODO: Update circuit breaker state
-                    cb.recordFailure();
-                    return retryWithBackoff(request, cb, 0);
-                } else {
-                    cb.recordSuccess();
-                    successCalls.incrementAndGet();
-                    return response;
-                }
-            });
+        throw new UnsupportedOperationException("TODO: implement callServiceWithRetry");
     }
     
     /**
-     * Retry với exponential backoff
+     * TODO: Retry với exponential backoff.
+     * Hướng dẫn:
+     *  1. Kiểm tra attempt >= MAX_RETRIES (ví dụ: 3): nếu vượt quá, return ServiceResponse.failure()
+     *  2. Tính toán exponential backoff delay: BASE_DELAY_MS * (2 ^ attempt) 
+     *     Ví dụ: 100ms, 200ms, 400ms cho attempt 0, 1, 2
+     *  3. Dùng scheduledExecutor.schedule() để delay retry
+     *  4. Trong scheduled task:
+     *     - retryCount.incrementAndGet()
+     *     - Gọi lại callService(request)
+     *     - Nếu thành công: cb.recordSuccess(), successCalls.incrementAndGet(), return response
+     *     - Nếu thất bại: cb.recordFailure(), gọi đệ quy retryWithBackoff(request, cb, attempt + 1)
+     *  5. Handle InterruptedException nếu có
      */
     private ServiceResponse retryWithBackoff(
             ServiceRequest request, 
             CircuitBreaker cb, 
             int attempt) {
-        
-        final int MAX_RETRIES = 3;
-        final long BASE_DELAY_MS = 100;
-        
-        if (attempt >= MAX_RETRIES) {
-            failedCalls.incrementAndGet();
-            return ServiceResponse.failure(
-                request.getServiceName(), 
-                "Max retries exceeded"
-            );
-        }
-        
-        // TODO: Calculate exponential backoff delay
-        // TODO: Schedule retry với ScheduledExecutorService
-        // TODO: Recursive retry call
-        
-        long delayMs = BASE_DELAY_MS * (1L << attempt); // Exponential: 100, 200, 400ms
-        
-        try {
-            Thread.sleep(delayMs);
-            retryCount.incrementAndGet();
-            
-            ServiceResponse response = callService(request);
-            if (response.isSuccess()) {
-                cb.recordSuccess();
-                successCalls.incrementAndGet();
-                return response;
-            } else {
-                cb.recordFailure();
-                return retryWithBackoff(request, cb, attempt + 1);
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return ServiceResponse.failure(
-                request.getServiceName(), 
-                "Interrupted during retry"
-            );
-        }
+        throw new UnsupportedOperationException("TODO: implement retryWithBackoff");
     }
     
     /**
-     * Simulate service call
+     * TODO: Simulate service call.
+     * Hướng dẫn:
+     *  - Giả lập network delay: Thread.sleep(random 50-250ms)
+     *  - Giả lập random failure: 20% chance return ServiceResponse.failure()
+     *  - Nếu thành công: return ServiceResponse.success() với data
+     *  - Handle InterruptedException nếu có
      */
     private ServiceResponse callService(ServiceRequest request) {
-        // TODO: Simulate service call với random delay
-        // TODO: Random failures để test retry và circuit breaker
-        
-        try {
-            // Simulate network delay
-            Thread.sleep(new Random().nextInt(200) + 50);
-            
-            // 20% chance of failure để test retry
-            if (Math.random() < 0.2) {
-                return ServiceResponse.failure(
-                    request.getServiceName(),
-                    "Service temporarily unavailable"
-                );
-            }
-            
-            return ServiceResponse.success(
-                request.getServiceName(),
-                "Data from " + request.getServiceName()
-            );
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return ServiceResponse.failure(
-                request.getServiceName(),
-                "Interrupted"
-            );
-        }
+        throw new UnsupportedOperationException("TODO: implement callService");
     }
     
     /**
-     * Shutdown executors gracefully
+     * TODO: Shutdown executors gracefully.
+     * Hướng dẫn:
+     *  1. Gọi shutdown() cho ioExecutor, cpuExecutor, scheduledExecutor
+     *  2. Dùng awaitTermination(5, TimeUnit.SECONDS) để đợi các task hoàn thành
+     *  3. Nếu timeout mà chưa xong, gọi shutdownNow() để force stop
+     *  4. Handle InterruptedException nếu có
      */
     public void shutdown() {
-        // TODO: Shutdown all executors
-        ioExecutor.shutdown();
-        cpuExecutor.shutdown();
-        scheduledExecutor.shutdown();
-        
-        try {
-            if (!ioExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
-                ioExecutor.shutdownNow();
-            }
-            if (!cpuExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
-                cpuExecutor.shutdownNow();
-            }
-            if (!scheduledExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
-                scheduledExecutor.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            ioExecutor.shutdownNow();
-            cpuExecutor.shutdownNow();
-            scheduledExecutor.shutdownNow();
-        }
+        throw new UnsupportedOperationException("TODO: implement shutdown");
     }
     
     public void printStatistics() {
@@ -309,39 +256,44 @@ public class AsyncServiceOrchestrator {
     }
     
     static class CircuitBreaker {
-        private volatile State state = State.CLOSED;
-        private final AtomicInteger failureCount = new AtomicInteger(0);
-        private final AtomicInteger successCount = new AtomicInteger(0);
-        private static final int FAILURE_THRESHOLD = 5;
-        private static final int SUCCESS_THRESHOLD = 2;
+        // TODO: Khai báo các field cần thiết:
+        //  - volatile State state = State.CLOSED
+        //  - AtomicInteger failureCount = new AtomicInteger(0)
+        //  - AtomicInteger successCount = new AtomicInteger(0)
+        //  - static final int FAILURE_THRESHOLD = 5
+        //  - static final int SUCCESS_THRESHOLD = 2
         
         enum State { CLOSED, OPEN, HALF_OPEN }
         
+        /**
+         * TODO: Ghi nhận một lần gọi service thành công.
+         * Hướng dẫn:
+         *  - Nếu state = HALF_OPEN:
+         *    + increment successCount
+         *    + Nếu successCount >= SUCCESS_THRESHOLD: chuyển về CLOSED, reset counters
+         *  - Nếu state = CLOSED: reset failureCount về 0
+         */
         public void recordSuccess() {
-            if (state == State.HALF_OPEN) {
-                successCount.incrementAndGet();
-                if (successCount.get() >= SUCCESS_THRESHOLD) {
-                    state = State.CLOSED;
-                    failureCount.set(0);
-                    successCount.set(0);
-                }
-            } else if (state == State.CLOSED) {
-                failureCount.set(0);
-            }
+            throw new UnsupportedOperationException("TODO: implement recordSuccess");
         }
         
+        /**
+         * TODO: Ghi nhận một lần gọi service thất bại.
+         * Hướng dẫn:
+         *  - Increment failureCount
+         *  - Nếu state = CLOSED và failureCount >= FAILURE_THRESHOLD: chuyển sang OPEN
+         *  - Nếu state = HALF_OPEN: chuyển về OPEN
+         *  - (Nâng cao) Schedule transition từ OPEN -> HALF_OPEN sau timeout (ví dụ: 30 giây)
+         */
         public void recordFailure() {
-            failureCount.incrementAndGet();
-            if (state == State.CLOSED && failureCount.get() >= FAILURE_THRESHOLD) {
-                state = State.OPEN;
-                // TODO: Schedule transition to HALF_OPEN after timeout
-            } else if (state == State.HALF_OPEN) {
-                state = State.OPEN;
-            }
+            throw new UnsupportedOperationException("TODO: implement recordFailure");
         }
         
+        /**
+         * TODO: Kiểm tra CircuitBreaker có đang OPEN không.
+         */
         public boolean isOpen() {
-            return state == State.OPEN;
+            throw new UnsupportedOperationException("TODO: implement isOpen");
         }
     }
     

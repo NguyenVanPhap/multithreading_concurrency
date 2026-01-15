@@ -35,198 +35,87 @@ public class DataPipelineProcessor {
     }
     
     /**
-     * Process data qua nhiều stages
+     * TODO: Process data qua nhiều stages.
+     * Hướng dẫn:
+     *  1. Stage 1: Fetch data (parallel) - gọi fetchDataStage(dataSources)
+     *  2. Stage 2: Transform data (depends on Stage 1) - dùng thenCompose() để chain
+     *  3. Stage 3: Validate data (depends on Stage 2) - dùng thenCompose() để chain
+     *  4. Stage 4: Aggregate data (depends on Stage 3) - dùng thenCompose() để chain
+     *  5. Stage 5: Store results (depends on Stage 4) - dùng thenCompose() để chain
+     *  6. Dùng thenApply() để convert StorageResult thành PipelineResult
+     *  7. Dùng exceptionally() để handle errors và return PipelineResult với error message
      */
     public CompletableFuture<PipelineResult> processPipeline(
             List<String> dataSources) {
-        
-        System.out.println("Starting pipeline with " + dataSources.size() + 
-                          " data sources...\n");
-        
-        // Stage 1: Fetch data (parallel)
-        CompletableFuture<List<RawData>> fetchStage = 
-            fetchDataStage(dataSources);
-        
-        // Stage 2: Transform data (parallel, depends on Stage 1)
-        CompletableFuture<List<TransformedData>> transformStage = 
-            fetchStage.thenCompose(this::transformDataStage);
-        
-        // Stage 3: Validate data (depends on Stage 2)
-        CompletableFuture<List<ValidatedData>> validateStage = 
-            transformStage.thenCompose(this::validateDataStage);
-        
-        // Stage 4: Aggregate data (depends on Stage 3)
-        CompletableFuture<AggregatedData> aggregateStage = 
-            validateStage.thenCompose(this::aggregateDataStage);
-        
-        // Stage 5: Store results (depends on Stage 4)
-        CompletableFuture<StorageResult> storeStage = 
-            aggregateStage.thenCompose(this::storeDataStage);
-        
-        // TODO: Combine all stages và track progress
-        // TODO: Handle errors ở mỗi stage
-        // TODO: Return final result với statistics
-        
-        return storeStage.thenApply(result -> {
-            return new PipelineResult(
-                result.isSuccess(),
-                result.getRecordsStored(),
-                result.getErrors()
-            );
-        }).exceptionally(throwable -> {
-            System.err.println("Pipeline failed: " + throwable.getMessage());
-            return new PipelineResult(false, 0, 
-                Collections.singletonList(throwable.getMessage()));
-        });
+        throw new UnsupportedOperationException("TODO: implement processPipeline");
     }
     
     /**
-     * Stage 1: Fetch data from multiple sources in parallel
+     * TODO: Stage 1 - Fetch data from multiple sources in parallel.
+     * Hướng dẫn:
+     *  1. Tạo CompletableFuture cho mỗi data source bằng CompletableFuture.supplyAsync()
+     *  2. Trong supplyAsync: giả lập fetch (Thread.sleep random 200-700ms), return RawData
+     *  3. Collect tất cả futures vào List
+     *  4. Dùng CompletableFuture.allOf() để đợi tất cả hoàn thành
+     *  5. Dùng thenApply() để collect kết quả từ tất cả futures thành List<RawData>
      */
     private CompletableFuture<List<RawData>> fetchDataStage(
             List<String> dataSources) {
-        
-        System.out.println("[Stage 1] Fetching data from " + 
-                          dataSources.size() + " sources...");
-        
-        // TODO: Tạo CompletableFuture cho mỗi data source
-        // TODO: Fetch song song
-        // TODO: Combine results với allOf
-        
-        List<CompletableFuture<RawData>> futures = dataSources.stream()
-            .map(source -> CompletableFuture.supplyAsync(() -> {
-                System.out.println("  Fetching from: " + source);
-                try {
-                    Thread.sleep(new Random().nextInt(500) + 200);
-                    return new RawData(source, "Data from " + source);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new RuntimeException(e);
-                }
-            }, executor))
-            .collect(Collectors.toList());
-        
-        CompletableFuture<Void> allFetched = CompletableFuture.allOf(
-            futures.toArray(new CompletableFuture[0])
-        );
-        
-        return allFetched.thenApply(v -> 
-            futures.stream()
-                .map(CompletableFuture::join)
-                .collect(Collectors.toList())
-        );
+        throw new UnsupportedOperationException("TODO: implement fetchDataStage");
     }
     
     /**
-     * Stage 2: Transform data in parallel
+     * TODO: Stage 2 - Transform data in parallel.
+     * Hướng dẫn:
+     *  1. Tạo CompletableFuture cho mỗi RawData bằng CompletableFuture.supplyAsync()
+     *  2. Trong supplyAsync: transform data (ví dụ: toUpperCase()), giả lập delay (100-400ms)
+     *  3. Return TransformedData
+     *  4. Collect tất cả futures và dùng allOf() để đợi tất cả hoàn thành
+     *  5. Dùng thenApply() để collect kết quả thành List<TransformedData>
+     *  (Nâng cao) Handle transformation errors bằng handle() hoặc exceptionally()
      */
     private CompletableFuture<List<TransformedData>> transformDataStage(
             List<RawData> rawDataList) {
-        
-        System.out.println("\n[Stage 2] Transforming " + 
-                          rawDataList.size() + " records...");
-        
-        // TODO: Transform mỗi record song song
-        // TODO: Handle transformation errors
-        
-        List<CompletableFuture<TransformedData>> futures = rawDataList.stream()
-            .map(data -> CompletableFuture.supplyAsync(() -> {
-                System.out.println("  Transforming: " + data.getSource());
-                try {
-                    Thread.sleep(new Random().nextInt(300) + 100);
-                    return new TransformedData(
-                        data.getSource(),
-                        data.getContent().toUpperCase()
-                    );
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new RuntimeException(e);
-                }
-            }, executor))
-            .collect(Collectors.toList());
-        
-        CompletableFuture<Void> allTransformed = CompletableFuture.allOf(
-            futures.toArray(new CompletableFuture[0])
-        );
-        
-        return allTransformed.thenApply(v -> 
-            futures.stream()
-                .map(CompletableFuture::join)
-                .collect(Collectors.toList())
-        );
+        throw new UnsupportedOperationException("TODO: implement transformDataStage");
     }
     
     /**
-     * Stage 3: Validate data
+     * TODO: Stage 3 - Validate data.
+     * Hướng dẫn:
+     *  1. Dùng CompletableFuture.supplyAsync() để validate data
+     *  2. Trong supplyAsync: filter invalid records (ví dụ: length > 5)
+     *  3. Map valid records thành ValidatedData
+     *  4. Return List<ValidatedData>
      */
     private CompletableFuture<List<ValidatedData>> validateDataStage(
             List<TransformedData> transformedDataList) {
-        
-        System.out.println("\n[Stage 3] Validating " + 
-                          transformedDataList.size() + " records...");
-        
-        // TODO: Validate data
-        // TODO: Filter invalid records
-        
-        return CompletableFuture.supplyAsync(() -> {
-            return transformedDataList.stream()
-                .filter(data -> data.getContent().length() > 5) // Simple validation
-                .map(data -> new ValidatedData(
-                    data.getSource(),
-                    data.getContent()
-                ))
-                .collect(Collectors.toList());
-        }, executor);
+        throw new UnsupportedOperationException("TODO: implement validateDataStage");
     }
     
     /**
-     * Stage 4: Aggregate data
+     * TODO: Stage 4 - Aggregate data.
+     * Hướng dẫn:
+     *  1. Dùng CompletableFuture.supplyAsync() để aggregate data
+     *  2. Trong supplyAsync: join tất cả content thành một string (ví dụ: dùng Collectors.joining())
+     *  3. Tính số lượng records
+     *  4. Return AggregatedData với recordCount và aggregatedContent
      */
     private CompletableFuture<AggregatedData> aggregateDataStage(
             List<ValidatedData> validatedDataList) {
-        
-        System.out.println("\n[Stage 4] Aggregating " + 
-                          validatedDataList.size() + " records...");
-        
-        // TODO: Aggregate data
-        // TODO: Calculate statistics
-        
-        return CompletableFuture.supplyAsync(() -> {
-            String aggregated = validatedDataList.stream()
-                .map(ValidatedData::getContent)
-                .collect(Collectors.joining(", "));
-            
-            return new AggregatedData(
-                validatedDataList.size(),
-                aggregated
-            );
-        }, executor);
+        throw new UnsupportedOperationException("TODO: implement aggregateDataStage");
     }
     
     /**
-     * Stage 5: Store results
+     * TODO: Stage 5 - Store results.
+     * Hướng dẫn:
+     *  1. Dùng CompletableFuture.supplyAsync() để store data
+     *  2. Trong supplyAsync: giả lập storage (Thread.sleep 500ms)
+     *  3. Nếu thành công: return StorageResult với success=true, recordsStored, empty errors
+     *  4. Nếu thất bại (InterruptedException): return StorageResult với success=false, error message
      */
     private CompletableFuture<StorageResult> storeDataStage(
             AggregatedData aggregatedData) {
-        
-        System.out.println("\n[Stage 5] Storing " + 
-                          aggregatedData.getRecordCount() + " records...");
-        
-        // TODO: Store data
-        // TODO: Return storage result
-        
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                Thread.sleep(500);
-                System.out.println("  Stored successfully!");
-                return new StorageResult(true, aggregatedData.getRecordCount(), 
-                                       Collections.emptyList());
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return new StorageResult(false, 0, 
-                    Collections.singletonList("Storage interrupted"));
-            }
-        }, executor);
+        throw new UnsupportedOperationException("TODO: implement storeDataStage");
     }
     
     public void shutdown() {
