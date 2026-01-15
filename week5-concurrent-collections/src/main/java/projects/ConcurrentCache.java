@@ -2,7 +2,6 @@ package projects;
 
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Project 2: Concurrent Cache
@@ -29,15 +28,40 @@ public class ConcurrentCache {
         System.out.println("  Concurrent Cache Demo");
         System.out.println("==========================================\n");
         
-        // TODO: Tạo cache
-        Cache<String, String> cache = null; // TODO: Create với DEFAULT_TTL_MS
+        // Tạo cache với TTL mặc định
+        Cache<String, String> cache = new ConcurrentCacheImpl<>(DEFAULT_TTL_MS);
         
-        // TODO: Test basic operations
-        // TODO: Test expiration
-        // TODO: Test concurrent access
-        // TODO: Test statistics
+        // Basic operations
+        cache.put("k1", "v1");
+        cache.put("k2", "v2", 2000);
+        System.out.println("get(k1) = " + cache.get("k1"));
+        System.out.println("get(k2) = " + cache.get("k2"));
         
-        // TODO: In ra statistics
+        // Expiration demo (đợi cho k2 hết hạn)
+        try {
+            Thread.sleep(2500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        System.out.println("after sleep, get(k2) = " + cache.get("k2"));
+        
+        // Concurrent access demo
+        ExecutorService executor = Executors.newFixedThreadPool(4);
+        for (int i = 0; i < 100; i++) {
+            final int idx = i;
+            executor.submit(() -> cache.put("ck" + idx, "cv" + idx));
+            executor.submit(() -> cache.get("ck" + (idx / 2)));
+        }
+        executor.shutdown();
+        try {
+            executor.awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+        
+        // In ra statistics
+        System.out.println(cache.getStats());
     }
     
     /**
@@ -54,7 +78,7 @@ public class ConcurrentCache {
     }
     
     /**
-     * TODO: Implement CacheEntry
+     * CacheEntry với expiration time.
      */
     static class CacheEntry<V> {
         private final V value;
@@ -62,8 +86,8 @@ public class ConcurrentCache {
         
         public CacheEntry(V value, long ttlMs) {
             this.value = value;
-            // TODO: Calculate expireTime = currentTime + ttlMs
-            this.expireTime = 0; // TODO: Set expire time
+            // expireTime = currentTime + ttlMs
+            this.expireTime = System.currentTimeMillis() + ttlMs;
         }
         
         public V getValue() {
@@ -71,33 +95,44 @@ public class ConcurrentCache {
         }
         
         public boolean isExpired() {
-            // TODO: Check if current time > expireTime
-            return false; // TODO: Return true if expired
+            // current time > expireTime thì coi như đã hết hạn
+            return System.currentTimeMillis() > expireTime;
         }
     }
     
     /**
-     * TODO: Implement ConcurrentCache class
+     * ConcurrentCache implementation dùng ConcurrentHashMap.
      */
     static class ConcurrentCacheImpl<K, V> implements Cache<K, V> {
         private final ConcurrentHashMap<K, CacheEntry<V>> map;
         private final long defaultTtlMs;
+        private final int maxSize;
         private final AtomicInteger hits = new AtomicInteger(0);
         private final AtomicInteger misses = new AtomicInteger(0);
         private final AtomicInteger evictions = new AtomicInteger(0);
         
         public ConcurrentCacheImpl(long defaultTtlMs) {
-            this.map = null; // TODO: Create ConcurrentHashMap
+            this.map = new ConcurrentHashMap<>();
             this.defaultTtlMs = defaultTtlMs;
+            this.maxSize = CACHE_SIZE;
         }
         
         @Override
         public V get(K key) {
-            // TODO: Get entry từ map
-            // TODO: Check if expired
-            // TODO: If expired, remove và increment misses
-            // TODO: If not expired, increment hits và return value
-            return null; // TODO: Return value or null
+            CacheEntry<V> entry = map.get(key);
+            if (entry == null) {
+                misses.incrementAndGet();
+                return null;
+            }
+            
+            if (entry.isExpired()) {
+                map.remove(key);
+                misses.incrementAndGet();
+                return null;
+            }
+            
+            hits.incrementAndGet();
+            return entry.getValue();
         }
         
         @Override
@@ -108,32 +143,73 @@ public class ConcurrentCache {
         
         @Override
         public void put(K key, V value, long ttlMs) {
-            // TODO: Create CacheEntry với TTL
-            // TODO: Put vào map
-            // TODO: Handle eviction nếu cache full
+            // Create CacheEntry với TTL
+            CacheEntry<V> entry = new CacheEntry<>(value, ttlMs);
+            
+            // Handle eviction nếu cache full (best-effort, không cần chính xác tuyệt đối)
+            while (map.size() >= maxSize) {
+                evictOne();
+                // nếu không evict được gì thì break để tránh vòng lặp vô hạn
+                if (map.size() >= maxSize) {
+                    break;
+                }
+            }
+            
+            // Put vào map
+            map.put(key, entry);
         }
         
         @Override
         public V remove(K key) {
-            // TODO: Remove từ map
-            return null; // TODO: Return removed value
+            CacheEntry<V> removed = map.remove(key);
+            return removed != null ? removed.getValue() : null;
         }
         
         @Override
         public void clear() {
-            // TODO: Clear map
+            map.clear();
         }
         
         @Override
         public int size() {
-            // TODO: Return map size
-            return 0; // TODO: Return size
+            return map.size();
         }
         
         @Override
         public CacheStats getStats() {
-            // TODO: Return statistics
-            return null; // TODO: Create và return CacheStats
+            return new CacheStats(
+                hits.get(),
+                misses.get(),
+                evictions.get(),
+                map.size()
+            );
+        }
+        
+        /**
+         * Evict một phần tử khỏi cache:
+         * - Ưu tiên xoá entry đã hết hạn
+         * - Nếu không có, xoá một key bất kỳ
+         */
+        private void evictOne() {
+            // 1. Thử xoá entry đã hết hạn trước
+            for (K key : map.keySet()) {
+                CacheEntry<V> entry = map.get(key);
+                if (entry != null && entry.isExpired()) {
+                    if (map.remove(key, entry)) {
+                        evictions.incrementAndGet();
+                        return;
+                    }
+                }
+            }
+            
+            // 2. Nếu không có expired, xoá 1 key bất kỳ
+            for (K key : map.keySet()) {
+                CacheEntry<V> entry = map.remove(key);
+                if (entry != null) {
+                    evictions.incrementAndGet();
+                    return;
+                }
+            }
         }
     }
     
