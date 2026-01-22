@@ -10,15 +10,16 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * "Trái tim" của project mới: engine điều phối các service bất đồng bộ.
- *
+ * <p>
  * Nơi đây bạn sẽ:
  * - Quản lý executors (IO / CPU / Scheduler)
  * - Lưu ServiceConfig, CircuitBreaker
  * - Expose API orchestrate phức tạp cho các scenario (Checkout, Refund, ...)
- *
+ * <p>
  * Hiện tại chỉ implement phần skeleton để mọi thứ biên dịch được;
  * phần thực sự "ngon" (CompletableFuture chain, retry, circuit breaker, ...)
  * sẽ là các TODO cho bạn tự làm.
@@ -51,48 +52,151 @@ public class AsyncOrchestratorEngine {
 
     /**
      * TODO: Đăng ký một ServiceConfig vào engine.
-     * Hướng dẫn:
-     *  1. Validate serviceConfig (serviceName != null, timeout > 0, ...)
-     *  2. Lưu vào serviceConfigs map
-     *  3. Khởi tạo CircuitBreaker cho service này nếu chưa có
-     *  (Nâng cao) Tạo executor riêng cho high-priority service (bulkhead pattern)
+     * Hướng dẫn chi tiết:
+     *  1. Validate serviceConfig:
+     *     - Kiểm tra serviceConfig != null
+     *     - Kiểm tra serviceName != null và không rỗng
+     *     - Kiểm tra timeout != null, > 0 và không âm
+     *     - Nếu không hợp lệ, throw IllegalArgumentException với message rõ ràng
+     *  2. Lưu vào serviceConfigs map với key là serviceName
+     *  3. Khởi tạo CircuitBreaker cho service này nếu chưa có:
+     *     - Dùng circuitBreakers.putIfAbsent() để tránh ghi đè
+     *     - Tạo CircuitBreaker với failureThreshold từ config.getDefaultCircuitBreakerFailureThreshold()
+     *  (Nâng cao) Tạo executor riêng cho high-priority service (bulkhead pattern):
+     *     - Kiểm tra serviceConfig.isHighPriority()
+     *     - Tạo dedicated executor cho service này để tránh ảnh hưởng lẫn nhau
      */
     public void registerService(ServiceConfig serviceConfig) {
-        throw new UnsupportedOperationException("TODO: implement registerService");
+        if (serviceConfig == null || serviceConfig.getServiceName() == null) {
+            throw new IllegalArgumentException("ServiceConfig or serviceName cannot be null");
+        }
+
+        if (serviceConfig.getTimeout() == null || serviceConfig.getTimeout().isNegative() || serviceConfig.getTimeout().isZero()) {
+            throw new IllegalArgumentException("ServiceConfig timeout must be positive");
+        }
+
+        serviceConfigs.put(serviceConfig.getServiceName(), serviceConfig);
+        circuitBreakers.putIfAbsent(
+            serviceConfig.getServiceName(),
+            new CircuitBreaker(config.getDefaultCircuitBreakerFailureThreshold())
+        );
+
+
     }
 
     /**
      * TODO: Lấy config của một service, fallback về default nếu chưa có.
-     * Hướng dẫn:
-     *  - Kiểm tra serviceConfigs có chứa serviceName không
-     *  - Nếu có, return config đó
-     *  - Nếu không, tạo default config từ OrchestratorConfig.getDefaultRequestTimeout()
-     *  (Nâng cao) Cho phép custom default config thay vì hard-code
+     * Hướng dẫn chi tiết:
+     *  1. Validate serviceName != null, throw IllegalArgumentException nếu null
+     *  2. Kiểm tra serviceConfigs.containsKey(serviceName):
+     *     - Nếu có: return serviceConfigs.get(serviceName)
+     *     - Nếu không: tạo default config:
+     *       * Dùng ServiceConfig.builder()
+     *       * Set serviceName = serviceName truyền vào
+     *       * Set timeout = config.getDefaultRequestTimeout()
+     *       * Set maxRetries = config.getGlobalMaxRetries()
+     *       * Các field khác dùng default value (cpuBound=false, priority=0, metadata=empty)
+     *       * Gọi build() để tạo ServiceConfig
+     *  3. Return ServiceConfig (đã đăng ký hoặc default)
+     *  (Nâng cao) Cho phép custom default config thay vì hard-code:
+     *     - Thêm method setDefaultServiceConfig(ServiceConfig) để set default template
+     *     - Khi tạo default, copy từ template thay vì hard-code
      */
     public ServiceConfig getServiceConfig(String serviceName) {
-        throw new UnsupportedOperationException("TODO: implement getServiceConfig");
+        if (serviceName == null) {
+            throw new IllegalArgumentException("serviceName cannot be null");
+        }
+
+        if (serviceConfigs.containsKey(serviceName)) {
+            return serviceConfigs.get(serviceName);
+        } else {
+            return ServiceConfig.builder()
+                .serviceName(serviceName)
+                .timeout(config.getDefaultRequestTimeout())
+                .maxRetries(config.getGlobalMaxRetries())
+                .build();
+        }
+
+
+        //throw new UnsupportedOperationException("TODO: implement getServiceConfig");
     }
 
     /**
      * TODO: API tổng quát để orchestrate nhiều service song song.
-     * Hướng dẫn:
-     *  1. Tạo CompletableFuture cho từng serviceName bằng cách gọi callSingleService()
-     *  2. Dùng CompletableFuture.allOf() để đợi tất cả hoàn thành
-     *  3. (Nâng cao) Thiết kế lớp OrchestratedRequest/OrchestratedResponse riêng để mô tả request phức tạp
-     *  4. (Nâng cao) Dùng thenCombine / anyOf để combine kết quả theo logic nghiệp vụ
+     * Hướng dẫn chi tiết:
+     *  1. Validate input:
+     *     - Kiểm tra serviceNames != null và không rỗng
+     *     - Nếu rỗng, return CompletableFuture.completedFuture(null)
+     *  2. Tạo CompletableFuture cho từng serviceName:
+     *     - Dùng stream().map(serviceName -> callSingleService(serviceName))
+     *     - Collect thành List<CompletableFuture<String>>
+     *  3. Dùng CompletableFuture.allOf() để đợi tất cả hoàn thành:
+     *     - Convert list thành array: futures.toArray(new CompletableFuture[0])
+     *     - CompletableFuture.allOf(...array)
+     *  4. Handle exception:
+     *     - Dùng handle() hoặc exceptionally() để catch exception từ bất kỳ service nào
+     *     - Có thể dùng join() trong thenRun() để propagate exception nếu cần
+     *  5. Return CompletableFuture<Void> (không cần kết quả, chỉ cần biết đã xong)
+     *  (Nâng cao) Thiết kế lớp OrchestratedRequest/OrchestratedResponse riêng để mô tả request phức tạp
+     *  (Nâng cao) Dùng thenCombine / anyOf để combine kết quả theo logic nghiệp vụ
      */
     public CompletableFuture<Void> orchestrateSimple(List<String> serviceNames) {
-        throw new UnsupportedOperationException("TODO: implement orchestrateSimple");
+        if (serviceNames == null) {
+            throw new IllegalArgumentException("serviceNames cannot be null");
+        }
+        if (serviceNames.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        List<CompletableFuture<String>> completableFutureList = serviceNames.stream()
+            .map(this::callSingleService)
+            .toList();
+
+        CompletableFuture<Void> all = CompletableFuture.allOf(completableFutureList.toArray(new CompletableFuture[0]));
+
+
+        return all.exceptionally(ex -> {
+            // propagate exception
+            System.err.println("Error in orchestration: " + ex.getMessage());
+            return null; // Return Void
+        });
+
     }
 
     /**
      * TODO: API orchestration nâng cao với dependency giữa các bước.
-     *
-     * Gợi ý:
-     *  - OrchestratedRequest mô tả graph các step + dependency
-     *  - OrchestratedResult chứa kết quả của từng step + danh sách lỗi
+     * Hướng dẫn chi tiết:
+     *  1. Validate request:
+     *     - Kiểm tra request != null, throw IllegalArgumentException nếu null
+     *     - Có thể validate dependency graph không có cycle (nếu request có method isValidDependencyGraph())
+     *  2. Tạo Map<String, CompletableFuture<StepResult>> để lưu future của từng step
+     *  3. Duyệt qua từng step trong request.getSteps():
+     *     - Với mỗi step, kiểm tra dependencies:
+     *       * Nếu không có dependency: tạo CompletableFuture.completedFuture(null) cho depsDone
+     *       * Nếu có dependencies: dùng CompletableFuture.allOf() để đợi tất cả dependencies hoàn thành
+     *     - Sau khi depsDone, gọi callSingleService(step.getServiceName())
+     *     - Wrap kết quả thành StepResult (success hoặc failure)
+     *     - Lưu vào map với key là step.getStepName()
+     *  4. Dùng Semaphore để giới hạn số step chạy đồng thời (request.getMaxConcurrentSteps())
+     *  5. Đợi tất cả step hoàn thành: CompletableFuture.allOf(...)
+     *  6. Tổng hợp kết quả:
+     *     - Tạo Map<String, StepResult> từ các future đã complete
+     *     - Tạo List<String> errors từ các step failed
+     *     - Xác định status: SUCCESS nếu không có lỗi, PARTIAL_SUCCESS nếu có lỗi nhưng allowPartialSuccess=true, FAILED nếu không
+     *  7. Tạo OrchestratedResponse với requestId, status, stepResults, errors, totalDuration
+     *  8. Return CompletableFuture<OrchestratedResponse>
+     * <p>
+     *  Lưu ý:
+     *  - Dùng thenCompose() để chain dependency
+     *  - Handle timeout cho từng step bằng step.getTimeout()
+     *  - Handle exception từng step và wrap thành StepResult.failure()
      */
     public CompletableFuture<OrchestratedResult> orchestrate(OrchestratedRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("OrchestratedRequest cannot be null");
+        }
+
+
         throw new UnsupportedOperationException("TODO: implement orchestrate(OrchestratedRequest)");
     }
 
@@ -134,23 +238,35 @@ public class AsyncOrchestratorEngine {
      *  6. Return CompletableFuture từ scheduled task
      */
     public CompletableFuture<String> callWithRetry(
-            String serviceName,
-            int attempt,
-            ServiceConfig serviceConfig,
-            CircuitBreaker circuitBreaker
+        String serviceName,
+        int attempt,
+        ServiceConfig serviceConfig,
+        CircuitBreaker circuitBreaker
     ) {
         throw new UnsupportedOperationException("TODO: implement callWithRetry");
     }
 
     /**
      * TODO: Hàm mô phỏng việc gọi service thực tế (HTTP call, DB call, v.v.).
-     * Hướng dẫn:
-     *  - Giả lập latency: Thread.sleep(random 100-400ms)
-     *  - Giả lập random failure: 20% chance throw RuntimeException
-     *  - Return string "Data from {serviceName}" nếu thành công
+     * Hướng dẫn chi tiết:
+     *  1. Validate serviceName != null
+     *  2. Giả lập latency:
+     *     - Dùng ThreadLocalRandom.current().nextInt(100, 401) để random 100-400ms
+     *     - Thread.sleep(sleepMs)
+     *     - Handle InterruptedException: set interrupt flag và throw RuntimeException
+     *  3. Giả lập random failure:
+     *     - Dùng ThreadLocalRandom.current().nextInt(100) < 20 để có 20% chance
+     *     - Nếu fail: throw new RuntimeException("Random failure when calling " + serviceName)
+     *  4. Return string "Data from {serviceName}" nếu thành công
+     * <p>
+     *  Lưu ý:
+     *  - Method này là private, chỉ được gọi từ callSingleService() hoặc callWithRetry()
+     *  - Không cần handle timeout ở đây (timeout được handle ở CompletableFuture.orTimeout())
      *  (Nâng cao) Tách phần này sang interface ServiceClient để có thể:
-     *    - Mock trong unit test
-     *    - Thay thế bằng HTTP client thực tế (OkHttp, Apache HttpClient, ...)
+     *    - Tạo interface ServiceClient với method call(String serviceName): CompletableFuture<String>
+     *    - Implement ServiceClientSimulator cho simulate
+     *    - Implement ServiceClientHttp cho HTTP client thực tế
+     *    - Mock trong unit test dễ dàng hơn
      */
     private String simulateServiceCall(String serviceName) {
         throw new UnsupportedOperationException("TODO: implement simulateServiceCall");
@@ -158,11 +274,32 @@ public class AsyncOrchestratorEngine {
 
     /**
      * TODO: Shutdown executors gracefully.
-     * Hướng dẫn:
-     *  1. Gọi shutdown() cho ioExecutor, cpuExecutor, scheduler
-     *  2. Dùng awaitTermination(timeout, TimeUnit.SECONDS) để đợi các task hoàn thành
-     *  3. Nếu timeout mà chưa xong, gọi shutdownNow() để force stop
-     *  4. Log nếu có task bị interrupt hoặc không shutdown được
+     * Hướng dẫn chi tiết:
+     *  1. Gọi shutdown() cho tất cả executors (không nhận task mới):
+     *     - ioExecutor.shutdown()
+     *     - cpuExecutor.shutdown()
+     *     - scheduler.shutdown()
+     *  2. Đợi các task hoàn thành với timeout:
+     *     - Dùng awaitTermination(5, TimeUnit.SECONDS) cho mỗi executor
+     *     - Nếu timeout (return false): gọi shutdownNow() để force stop
+     *  3. Handle InterruptedException:
+     *     - Nếu bị interrupt trong lúc awaitTermination: set interrupt flag lại
+     *     - Gọi shutdownNow() để force stop
+     *  4. Log thông tin:
+     *     - Nếu shutdownNow() được gọi: in số lượng task bị cancel
+     *     - Có thể dùng System.err.println() hoặc logger nếu có
+     *  5. Lưu ý: Có thể tạo helper method shutdownExecutor(ExecutorService, String name) để tránh code lặp
+     * <p>
+     *  Ví dụ pattern:
+     *  try {
+     *    if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+     *      List<Runnable> dropped = executor.shutdownNow();
+     *      System.err.println("Force shutdown " + name + ", dropped tasks: " + dropped.size());
+     *    }
+     *  } catch (InterruptedException e) {
+     *    Thread.currentThread().interrupt();
+     *    executor.shutdownNow();
+     *  }
      */
     public void shutdown() {
         throw new UnsupportedOperationException("TODO: implement shutdown");
@@ -174,10 +311,10 @@ public class AsyncOrchestratorEngine {
 
     /**
      * TODO: mô tả một request orchestration phức tạp với nhiều step và dependency.
-     *
+     * <p>
      * Gợi ý:
-     *  - có thể dùng builder pattern
-     *  - mỗi step chứa: tên, serviceName, danh sách step phụ thuộc
+     * - có thể dùng builder pattern
+     * - mỗi step chứa: tên, serviceName, danh sách step phụ thuộc
      */
     public static class OrchestratedRequest {
         // TODO: khai báo các field cần thiết (steps, metadata, timeout tổng, ...)
@@ -191,62 +328,6 @@ public class AsyncOrchestratorEngine {
         // TODO: map stepName -> result, danh sách error, duration tổng, ...
     }
 
-    // ======================
-    // Inner CircuitBreaker
-    // ======================
-
-    public static class CircuitBreaker {
-        public enum State {CLOSED, OPEN, HALF_OPEN}
-
-        // TODO: Khai báo các field cần thiết:
-        //  - private volatile State state = State.CLOSED;
-        //  - private final AtomicInteger failureCount = new AtomicInteger(0);
-        //  - private final AtomicInteger successCount = new AtomicInteger(0);
-        //  - private static final int FAILURE_THRESHOLD = 5;
-        //  - private static final int SUCCESS_THRESHOLD = 2;
-        //  (Nâng cao) private ScheduledFuture<?> resetFuture; để cancel scheduled transition nếu cần
-        //
-        // Lưu ý: Bạn cần khai báo các field này để code compile được
-
-        /**
-         * TODO: Ghi nhận một lần gọi service thành công.
-         * Hướng dẫn:
-         *  - Nếu state = HALF_OPEN:
-         *    + increment successCount
-         *    + Nếu successCount >= SUCCESS_THRESHOLD: chuyển về CLOSED, reset counters
-         *  - Nếu state = CLOSED: reset failureCount về 0
-         */
-        public void recordSuccess() {
-            throw new UnsupportedOperationException("TODO: implement recordSuccess");
-        }
-
-        /**
-         * TODO: Ghi nhận một lần gọi service thất bại.
-         * Hướng dẫn:
-         *  - Nếu state = OPEN: return ngay (không làm gì)
-         *  - Increment failureCount
-         *  - Nếu failureCount >= FAILURE_THRESHOLD: chuyển sang OPEN
-         *  - (Nâng cao) Dùng scheduler để schedule transition từ OPEN -> HALF_OPEN sau X ms
-         *    (ví dụ: sau 30 giây, chuyển sang HALF_OPEN để thử lại)
-         */
-        public void recordFailure() {
-            throw new UnsupportedOperationException("TODO: implement recordFailure");
-        }
-
-        /**
-         * TODO: Kiểm tra CircuitBreaker có đang OPEN không.
-         */
-        public boolean isOpen() {
-            throw new UnsupportedOperationException("TODO: implement isOpen");
-        }
-
-        /**
-         * TODO: Lấy state hiện tại của CircuitBreaker.
-         */
-        public State getState() {
-            throw new UnsupportedOperationException("TODO: implement getState");
-        }
-    }
 }
 
 

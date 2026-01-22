@@ -43,37 +43,30 @@ public class OrchestratorConfig {
     
     @Builder.Default
     String loggingLevel = "INFO";
-
-    // Custom validation trong builder
-    public static class OrchestratorConfigBuilder {
-        public OrchestratorConfig build() {
-            // Validation trước khi build
-            if (ioThreads <= 0) {
-                throw new IllegalArgumentException("ioThreads must be > 0");
-            }
-            if (cpuThreads <= 0) {
-                throw new IllegalArgumentException("cpuThreads must be > 0");
-            }
-            if (schedulerThreads <= 0) {
-                throw new IllegalArgumentException("schedulerThreads must be > 0");
-            }
-            if (defaultRequestTimeout == null || defaultRequestTimeout.isNegative() || defaultRequestTimeout.isZero()) {
-                throw new IllegalArgumentException("defaultRequestTimeout must be positive");
-            }
-            if (globalMaxRetries < 0) {
-                throw new IllegalArgumentException("globalMaxRetries must be >= 0");
-            }
-            if (defaultCircuitBreakerFailureThreshold <= 0) {
-                throw new IllegalArgumentException("defaultCircuitBreakerFailureThreshold must be > 0");
-            }
-            if (loggingLevel == null || loggingLevel.trim().isEmpty()) {
-                throw new IllegalArgumentException("loggingLevel cannot be null or empty");
-            }
-            // Gọi constructor với các fields từ builder (Lombok sẽ tạo các fields này)
-            return new OrchestratorConfig(ioThreads, cpuThreads, schedulerThreads, defaultRequestTimeout,
-                    globalMaxRetries, defaultCircuitBreakerFailureThreshold, metricsEnabled, tracingEnabled, loggingLevel);
+    
+    // Validation method để gọi sau khi build (optional)
+    public void validate() {
+        if (ioThreads <= 0) {
+            throw new IllegalArgumentException("ioThreads must be > 0");
+        }
+        if (cpuThreads <= 0) {
+            throw new IllegalArgumentException("cpuThreads must be > 0");
+        }
+        if (schedulerThreads <= 0) {
+            throw new IllegalArgumentException("schedulerThreads must be > 0");
+        }
+        if (defaultRequestTimeout == null || defaultRequestTimeout.isNegative() || defaultRequestTimeout.isZero()) {
+            throw new IllegalArgumentException("defaultRequestTimeout must be positive");
+        }
+        if (globalMaxRetries < 0) {
+            throw new IllegalArgumentException("globalMaxRetries must be >= 0");
+        }
+        if (defaultCircuitBreakerFailureThreshold <= 0) {
+            throw new IllegalArgumentException("defaultCircuitBreakerFailureThreshold must be > 0");
+        }
+        if (loggingLevel == null || loggingLevel.trim().isEmpty()) {
+            throw new IllegalArgumentException("loggingLevel cannot be null or empty");
         }
     }
 }
-
 

@@ -1,6 +1,7 @@
 package projects.asyncserviceorchestrator.config;
 
 import lombok.Builder;
+import lombok.Singular;
 import lombok.Value;
 
 import java.time.Duration;
@@ -38,18 +39,13 @@ public class ServiceConfig {
     int priority = 0; // số càng lớn, ưu tiên càng cao
 
     // (Nâng cao) metadata linh hoạt: headers, tags, v.v.
-    @Builder.Default
-    Map<String, String> metadata = new HashMap<>();
+    @Singular("metadata")
+    Map<String, String> metadata;
 
     // Custom getter để đảm bảo metadata immutable
     public Map<String, String> getMetadata() {
         return Collections.unmodifiableMap(metadata);
     }
-
-    // TODO: (nâng cao) encapsulate logic, ví dụ:
-    //  - boolean isHighPriority()
-    //  - boolean isRetryEnabled()
-    //  - Duration computeNextBackoff(int attempt)
 
     /**
      * Xác định service có priority cao hay không (priority >= 8).
@@ -94,35 +90,19 @@ public class ServiceConfig {
         return Duration.ofMillis(delayMs);
     }
 
-    // Custom validation trong builder
-    public static class ServiceConfigBuilder {
-        public ServiceConfig build() {
-            // Validation trước khi build - truy cập fields từ builder class
-            String name = this.serviceName;
-            Duration t = this.timeout;
-            int retries = this.maxRetries;
-            boolean cpu = this.cpuBound;
-            int prio = this.priority;
-            Map<String, String> meta = this.metadata;
-            
-            if (name == null || name.trim().isEmpty()) {
-                throw new IllegalArgumentException("serviceName cannot be null or empty");
-            }
-            if (t == null || t.isNegative() || t.isZero()) {
-                throw new IllegalArgumentException("timeout must be positive");
-            }
-            if (retries < 0) {
-                throw new IllegalArgumentException("maxRetries must be >= 0");
-            }
-            if (prio < 0) {
-                throw new IllegalArgumentException("priority must be >= 0");
-            }
-            // Đảm bảo metadata không null - tạo mới nếu null
-            Map<String, String> finalMetadata = meta != null ? meta : new HashMap<>();
-            // Gọi constructor với các fields từ builder (theo thứ tự: serviceName, timeout, maxRetries, cpuBound, priority, metadata)
-            return new ServiceConfig(name, t, retries, cpu, prio, finalMetadata);
+    // Validation method để gọi sau khi build (optional)
+    public void validate() {
+        if (serviceName == null || serviceName.trim().isEmpty()) {
+            throw new IllegalArgumentException("serviceName cannot be null or empty");
+        }
+        if (timeout == null || timeout.isNegative() || timeout.isZero()) {
+            throw new IllegalArgumentException("timeout must be positive");
+        }
+        if (maxRetries < 0) {
+            throw new IllegalArgumentException("maxRetries must be >= 0");
+        }
+        if (priority < 0) {
+            throw new IllegalArgumentException("priority must be >= 0");
         }
     }
 }
-
-
