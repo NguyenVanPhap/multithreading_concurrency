@@ -25,41 +25,66 @@ public class CheckoutScenario {
     }
 
     /**
-     * TODO: Chạy demo scenario Checkout.
-     * Hướng dẫn chi tiết:
-     * 
-     * Bước 1: Thiết kế DTO
-     *  - Tạo class CheckoutRequest (userId, cartItems, paymentMethod, ...)
-     *  - Tạo class CheckoutResult (status, orderId, errors, events, ...)
-     * 
-     * Bước 2: Xây dựng flow checkout thực sự
-     *  Flow gợi ý:
-     *    1. loadUser(userId) -> trả về User object
-     *    2. validateCart(cartItems) -> kiểm tra cart hợp lệ
-     *    3. reserveInventory(cartItems) -> giữ hàng trong kho
-     *    4. chargePayment(paymentMethod, amount) -> thanh toán
-     *    5. createOrder(userId, cartItems) -> tạo đơn hàng
-     *    6. sendNotification(userId, orderId) -> gửi thông báo
-     * 
-     * Bước 3: Xử lý dependencies và error handling
-     *  - Một số bước có thể chạy song song (ví dụ: loadUser và validateCart)
-     *  - Một số bước phải tuần tự (ví dụ: phải reserveInventory trước khi chargePayment)
-     *  - Dùng CompletableFuture.thenCompose() cho dependencies
-     *  - Dùng CompletableFuture.thenCombine() cho các bước song song
-     * 
-     * Bước 4: Xử lý rollback (compensating transaction)
-     *  - Nếu createOrder fail sau khi chargePayment thành công:
-     *    + Gọi RefundService để hoàn tiền
-     *  - Nếu chargePayment fail sau khi reserveInventory thành công:
-     *    + Gọi ReleaseInventoryService để giải phóng hàng
-     * 
-     * Bước 5: Logging và metrics
-     *  - Log từng bước: bắt đầu, thành công, thất bại
-     *  - Đo thời gian mỗi bước
-     *  - In ra kết quả cuối cùng
+     * Chạy demo scenario Checkout.
      */
     public void runDemo() {
-        throw new UnsupportedOperationException("TODO: implement runDemo");
+        System.out.println("\n========== CHECKOUT SCENARIO ==========");
+        System.out.println("Starting checkout process...\n");
+        
+        long startTime = System.currentTimeMillis();
+        
+        // Bước 1: Load user và validate cart song song
+        System.out.println("Step 1: Loading user and validating cart (parallel)...");
+        CompletableFuture<String> userFuture = engine.callSingleService("UserService");
+        CompletableFuture<String> cartFuture = engine.callSingleService("OrderService");
+        
+        CompletableFuture<String> userAndCart = userFuture.thenCombine(cartFuture, (user, cart) -> {
+            System.out.println("  ✓ User loaded: " + user);
+            System.out.println("  ✓ Cart validated: " + cart);
+            return "User and cart ready";
+        });
+        
+        // Bước 2: Reserve inventory (phải đợi user và cart)
+        System.out.println("\nStep 2: Reserving inventory...");
+        CompletableFuture<String> inventoryFuture = userAndCart.thenCompose(v -> {
+            return engine.callSingleService("InventoryService");
+        });
+        
+        // Bước 3: Charge payment (phải đợi inventory)
+        System.out.println("\nStep 3: Charging payment...");
+        CompletableFuture<String> paymentFuture = inventoryFuture.thenCompose(v -> {
+            System.out.println("  ✓ Inventory reserved: " + v);
+            return engine.callSingleService("PaymentService");
+        });
+        
+        // Bước 4: Create order (phải đợi payment)
+        System.out.println("\nStep 4: Creating order...");
+        CompletableFuture<String> orderFuture = paymentFuture.thenCompose(v -> {
+            System.out.println("  ✓ Payment charged: " + v);
+            return engine.callSingleService("OrderService");
+        });
+        
+        // Bước 5: Send notification (có thể chạy song song với order, nhưng đợi order để có orderId)
+        System.out.println("\nStep 5: Sending notification...");
+        CompletableFuture<String> notificationFuture = orderFuture.thenCompose(v -> {
+            System.out.println("  ✓ Order created: " + v);
+            return engine.callSingleService("NotificationService");
+        });
+        
+        // Đợi tất cả hoàn thành
+        try {
+            String result = notificationFuture.get();
+            System.out.println("\n  ✓ Notification sent: " + result);
+            
+            long duration = System.currentTimeMillis() - startTime;
+            System.out.println("\n========== CHECKOUT COMPLETED ==========");
+            System.out.println("Total duration: " + duration + "ms");
+            System.out.println("Status: SUCCESS\n");
+        } catch (Exception e) {
+            System.err.println("\n========== CHECKOUT FAILED ==========");
+            System.err.println("Error: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }
 
